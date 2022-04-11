@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+    <script type="text/javascript">
+	"use strict"; 
+	
+    var can, ctx1;
+	var blocksWide = 20;
+	var blocksHigh = 20;
+	var blockWidth, blockHeight;
+	var numberOfWalls = 25;
+	var wallMinLength = blocksWide/10;
+	var walls = [], characters, destinations;
+	var characterWidth, characterHeight, characterOffset;
+	var bgColor = "white";
+	var alreadyMoved = 0;
+	var audioContext = null;
+	var score = 0;
+	var lives = 3;
+	var invinsible = 0;
+	var playerInterval, characterInterval;
+	var paused = true;
+	var dots;
+	var dotCount = 0;
+	
+	function create2dArray(rows, cols, value)
+	{
+		var arr = [];
+		for(var row = 0; row < rows; row++)
+		{
+			arr.push([]);
+			for(var col = 0; col < cols; col++) arr[row][col] = value;
+		}
+		return arr;
+	}
+
+	function beep(a) // beep({freq:520, duration:200, vol:100, delay:200, times:1}
+	{
+		if(!a.freq) a.freq = 500;
+		if(!a.duration) a.duration = 150;
+		if(!a.vol) a.vol = 100;
+		if(!a.times) a.times = 1;
+		if(!a.delay) a.delay = 170;
+		const oscillator = audioContext.createOscillator();
+		const gain = audioContext.createGain();
+		oscillator.connect(gain);
+		oscillator.frequency.value = a.freq;
+		oscillator.type = "square";
+		gain.connect(audioContext.destination);
+		gain.gain.value = a.vol * 0.01;
+		oscillator.start(audioContext.currentTime);
+		oscillator.stop(audioContext.currentTime + a.duration * 0.001);
+		a.times--;
+		if(a.times && !paused) setTimeout(function() {beep(a)}, a.delay);
+	}
+
+    function init()
+	{
+		dots = create2dArray(blocksHigh, blocksWide, 0);
+        can = document.getElementById('can1');
+		can.style.backgroundColor = bgColor;
+        ctx1 = can.getContext("2d");
+		
+		blockWidth = can.width / blocksWide;
+		blockHeight = can.height / blocksHigh;
+		characterWidth = blockWidth * .8;
+		characterHeight = blockHeight * .8;
+		characterOffset = blockWidth * .1;
+    
+		characters = [ { color: "yellow" }, { color: "blue" }, { color: "purple" }, { color: "red" }, { color: "pink" } ];
+		destinations = [ { x: 0, y: 0 }, { x: can.width, y: 0 }, { x: 0, y: can.height }, { x: can.width, y: can.height }, { x: can.width/2-can.width/2, y: can.height/2 }, { x: can.width/2-can.width/2, y: can.height/2 } ]
+		
+		makeWalls();
+		for(var i = 0; i < characters.length; i++) setRandomPosition(characters[i]);
+		resetDots();
+		drawAll();
+		/*
+		ctx1.fillStyle = "white";
+		ctx1.fillRect(130, 70, 430, 100);
+		ctx1.fillStyle = "red";
+		ctx1.font = "30px Arial";
+		ctx1.fillText("RatMan", 300, 100);
+		ctx1.fillText("Press any key to start!", 150, 150);
+		*/
+        document.addEventListener("keydown", unPause, false);
+        document.addEventListener("click", unPause, false);
+	}
+	
+	function makeWalls()
+	{
+		var tries = numberOfWalls * 40;
+		for(var i = 0; i < numberOfWalls && tries > 0; i++)
+		{
+			tries++;
+			var direction = getRandomInt(0, 1);
+			var x1 = getRandomInt(0, blocksWide-1) * blockWidth;
+			var y1 = getRandomInt(0, blocksWide-1) * blockWidth;
+			var width1 = getRandomInt(wallMinLength, blocksWide-(x1/blockWidth)) * blockWidth;
+			var height1 = getRandomInt(wallMinLength, blocksWide-(y1/blockHeight)) * blockHeight;
+			
+			if(direction == 0) height1 = blockHeight;
+			if(direction == 1) width1 = blockWidth;
+
+			if(direction == 0 && wallMinLength * blockWidth > width1) { i--; continue; }
+			if(direction == 1 && wallMinLength * blockHeight > height1) { i--; continue; }
+			
+			if(!isWallAt(x1-blockWidth, y1-blockHeight, width1+blockWidth*2, height1+blockHeight*2)) walls.push( { x: x1, y: y1, width: width1, height: height1 } );
+			else i--;
+		}
+		if(tries == 0) console.log("ran out of wall space");
+	}
+	
+	function setRandomPosition(c)
+	{
+		c.x = -1;
+		c.y = -1;
+		while(!isValidMove(c.x, c.y, c.width, c.height) || isCharacterAt(c.x, c.y, null, c))
+		{
+			c.x = getRandomInt(0, blocksWide-1)*blockWidth;
+			c.y = getRandomInt(0, blocksHigh-1)*blockHeight;
+			var direction = getRandomInt(0, 3);
+			if(direction == 0) c.x = 0;
+			if(direction == 1) c.y = 0;
+			if(direction == 2) c.x = blockHeight*19;
+			if(direction == 3) c.y = blockHeight*19;
+		}
+	}
+	
+	function pause()
+	{
+		paused = true;
+		if(playerInterval) clearInterval(playerInterval);
+		if(characterInterval) clearInterval(characterInterval);
+		
+		ctx1.fillStyle = "white";
+		ctx1.fillRect(130, 70, 430, 100);
+		ctx1.fillStyle = "red";
+		ctx1.font = "30px Arial";
+		ctx1.fillText("RatMan", 300, 100);
+		ctx1.fillText("PAUSED! Press any key", 150, 150);
+	}
+	
+	function showScore()
+	{
+		document.getElementById("scoreBoard").innerHTML = "&nbsp; You have eaten: " + score + " cheese &nbsp; &nbsp; &nbsp; out of: " + dotCount + " &nbsp; &nbsp; &nbsp; lives: " + lives;
+	}
+
+	function drawAll()
+	{
+		ctx1.fillStyle = "white";
+		ctx1.fillRect(0, 0, can.width, can.height); // clear canvas
+		drawDots();
+		drawWalls();
+		for(var i = 0; i < characters.length; i++) drawCharacter(characters[i]);
+		showScore();
+
+	}
+	
+	function unPause()
+	{
+		paused = false;
+		document.removeEventListener("keydown", unPause);
+		document.removeEventListener("click", unPause);
+		//if(audioContext == null) audioContext = new AudioContext();
+        document.addEventListener("keydown", playerDirection, false);
+		drawAll();
+		playerInterval = setInterval(playerMove, 250);
+		characterInterval = setInterval(characterMove, 300);
+    }
+
+	function death()
+	{
+		//beep({freq:120, duration: 400});
+		//beep({freq:1000, duration: 10, delay: 500, times: 20});
+		score = 0;
+		lives--;
+		invinsible = 15;
+	}
+
+	function eatDot(x, y)
+	{
+		if(dots[y/blockWidth][x/blockWidth] == 1)
+		{
+			score++;
+			dots[y/blockWidth][x/blockWidth] = 0;
+			showScore();
+		}
+	}
+	
+	function drawDot(x, y)
+	{
+		if(dots[y/blockWidth][x/blockWidth] == 1)
+		{
+			ctx1.fillStyle = "orange";
+			ctx1.fillRect(x+blockWidth/3, y+blockHeight/3, blockWidth/3, blockHeight/3);
+		}
+	}
+	
+	function drawDots()
+	{
+		for(var y = 0; y < can.width; y += blockWidth)
+		{
+			for(var x = 0; x < can.width; x += blockWidth)
+			{
+				if(isValidMove(x, y, characterWidth, characterHeight))
+				{
+					dots[y/blockWidth][x/blockWidth] = 1;
+					drawDot(x, y);
+				}
+			}
+		}
+	}
+	
+	function resetDots()
+	{
+		for(var y = 0; y < can.width; y += blockWidth)
+		{
+			for(var x = 0; x < can.width; x += blockWidth)
+			{
+				if(isValidMove(x, y, characterWidth, characterHeight))
+				{
+					dots[y/blockWidth][x/blockWidth] = 1;
+					dotCount++;
+				}
+			}
+		}
+	}
+	
+    function drawWalls()
+	{
+		for(var i = 0; i < walls.length; i++)
+		{
+			if(walls[i].color == undefined) walls[i].color = "black";
+			ctx1.fillStyle = walls[i].color;
+			ctx1.fillRect(walls[i].x, walls[i].y, walls[i].width, walls[i].height);
+		}
+    }
+	
+    function drawCharacter(c)
+	{
+		if(c.width == undefined) c.width = characterWidth;
+		if(c.height == undefined) c.height = characterHeight;
+		ctx1.fillStyle = bgColor;
+		ctx1.fillRect(c.oldX+characterOffset, c.oldY+characterOffset, c.width, c.height); // erase previous location
+		if(c.oldX) drawDot(c.oldX, c.oldY)
+		ctx1.fillStyle = c.color;
+		ctx1.fillRect(c.x+characterOffset, c.y+characterOffset, c.width, c.height);
+		c.oldX = c.x;
+		c.oldY = c.y;
+    }
+	
+    function playerMove()
+	{
+		if(invinsible > 0) invinsible--;
+		var c = characters[0];
+		var newX = c.x, newY = c.y, newDirection = c.d;
+		
+		if(newDirection === 0) newX = c.x - blockWidth;
+		if(newDirection === 1) newX = c.x + blockWidth;
+		if(newDirection === 2) newY = c.y - blockHeight;
+		if(newDirection === 3) newY = c.y + blockHeight;
+
+		if(isValidMove(newX, newY, c.width, c.height))
+		{
+			c.x = newX;
+			c.y = newY;
+			eatDot(c.x, c.y);
+			drawCharacter(c);
+			if(isCharacterAt(c.x, c.y) && invinsible == 0) death();
+		}
+    }
+	
+    function playerDirection(e)
+	{
+		if(e.keyCode === 37 || e.keyCode === 39 || e.keyCode === 38 || e.keyCode === 40)
+		{
+			var c = characters[0];
+			var newX = c.x, newX2 = c.x, newY = c.y, newY2 = c.y, newDirection = c.d;
+			if(e.keyCode === 37) { newDirection = 0; newX -= blockWidth; newX2 -= blockWidth*2; }
+			if(e.keyCode === 39) { newDirection = 1; newX += blockWidth; newX2 += blockWidth*2; }
+			if(e.keyCode === 38) { newDirection = 2; newY -= blockHeight; newY2 -= blockWidth*2; }
+			if(e.keyCode === 40) { newDirection = 3; newY += blockHeight; newY2 += blockWidth*2; }
+			if(isValidMove(newX, newY, c.width, c.height) || isValidMove(newX2, newY2, c.width, c.height)) c.d = newDirection;
+		}
+		if(e.key == 'p') { if(!paused) pause(); else unPause(); }
+    }
+	
+    function characterMove()
+	{
+		var player = characters[0];
+		for(var characterNum = 1; characterNum < characters.length; characterNum++)
+		{
+			var c = characters[characterNum];
+			var playerDistance = getDistance(player.x, c.x, player.y, c.y);
+			var bestX = c.x;
+			var bestY = c.y;
+			var scramble = [ 0, 1, 2, 3 ];
+			scramble.sort(() => Math.random() - 0.5);
+			for(var i2 = 0; i2 < 4; i2++)
+			{
+				var newX = c.x;
+				var newY = c.y;
+				if(i2 === scramble[0]) newX = c.x - blockWidth;
+				if(i2 === scramble[1]) newX = c.x + blockWidth;
+				if(i2 === scramble[2]) newY = c.y - blockHeight;
+				if(i2 === scramble[3]) newY = c.y + blockHeight;
+				if(!isValidMove(newX, newY, c.width, c.height)) continue;
+				
+				if(c.dest == undefined) c.dest = getRandomInt(0, destinations.length-1);
+				var destX = destinations[c.dest].x;
+				var destY = destinations[c.dest].y; 
+				if(playerDistance < 200) { destX = player.x; destY = player.y; }
+
+				var bestDistance = getDistance(destX, bestX, destY, bestY);
+				var newDistance = getDistance(destX, newX, destY, newY);
+				if(newDistance < bestDistance) { bestX = newX; bestY = newY; }
+			}
+			if(bestX == c.x && bestY == c.y) c.dest = getRandomInt(0, destinations.length-1); // stuck, change destination
+			c.x = bestX;
+			c.y = bestY;
+			if(isPlayerAt(c.x, c.y) && invinsible == 0) death();
+			drawCharacter(c);
+		}
+    }
+	
+	function getDistance(x1, x2, y1, y2)
+	{
+		var distance = 0;
+		distance = Math.abs(x1 - x2) + Math.abs(y1 - y2); // (10)-(20)=-10 (-10)-(-10)=0. (-10)-(-30)=20. (-20)-(20)=-40
+		return distance;
+	}
+	
+	function isValidMove(newX, newY, width, height)
+	{
+		if(newX < 0) return false;
+		if(newX + width > can.width) return false;
+		if(newY < 0) return false;
+		if(newY + height > can.height) return false;
+		return !isWallAt(newX, newY, width, height);
+	}
+	
+	function isWallAt(newX, newY, width, height)
+	{
+		for(var i = 0; i < walls.length; i++)
+		{
+			if(
+			newX + width >= walls[i].x &&
+			newX < walls[i].x + walls[i].width &&
+			newY + height >= walls[i].y &&
+			newY < walls[i].y + walls[i].height) return true;
+		}
+		return false;
+	}
+	
+	function isCharacterAt(x, y, notCharacterNum, notCharacter)
+	{
+		for(var i = 1; i < characters.length; i++)
+		{
+			if(i != notCharacterNum && characters[i] != notCharacter && x == characters[i].x && y == characters[i].y) return true;
+		}
+		return false;
+	}
+	
+	function isPlayerAt(x, y) { return characters[0].x == x && characters[0].y == y; }
+	
+	function getRandomInt(min, max)
+	{
+	  min = Math.ceil(min);
+	  max = Math.floor(max);
+	  return Math.floor(Math.random() * (max+1 - min) + min);
+	}
+	
+    </script>
+    
+	<body onload="init()" style="background-color: grey">
+        <canvas id="can1" width="700" height="700" style="border:2px solid;"></canvas>
+		<div id='scoreBoard' style='background-color: white; width: 700px; '>test</div>
+	</body>
+</html>
+		
+		
+		
+		
+ 
