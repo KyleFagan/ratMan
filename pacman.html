@@ -3,16 +3,16 @@
     <script type="text/javascript">
 	"use strict"; 
 	
-    var can, ctx1;
+    var can, ctx;
 	var blocksWide = 20;
 	var blocksHigh = 20;
 	var blockWidth, blockHeight;
-	var numberOfWalls = 25;
+	var numberOfWalls = 15;
+	var maxTriesToPlaceWalls = numberOfWalls * 40;
 	var wallMinLength = blocksWide/10;
 	var walls = [], characters, destinations;
 	var characterWidth, characterHeight, characterOffset;
 	var bgColor = "white";
-	var alreadyMoved = 0;
 	var audioContext = null;
 	var score = 0;
 	var lives = 3;
@@ -58,7 +58,7 @@
 		dots = create2dArray(blocksHigh, blocksWide, 0);
         can = document.getElementById('can1');
 		can.style.backgroundColor = bgColor;
-        ctx1 = can.getContext("2d");
+        ctx = can.getContext("2d");
 		
 		blockWidth = can.width / blocksWide;
 		blockHeight = can.height / blocksHigh;
@@ -66,31 +66,29 @@
 		characterHeight = blockHeight * .8;
 		characterOffset = blockWidth * .1;
     
-		characters = [ { color: "yellow" }, { color: "blue" }, { color: "purple" }, { color: "red" }, { color: "pink" } ];
+		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "red" }, { id: 4, color: "pink" } ];
 		destinations = [ { x: 0, y: 0 }, { x: can.width, y: 0 }, { x: 0, y: can.height }, { x: can.width, y: can.height }, { x: can.width/2-can.width/2, y: can.height/2 }, { x: can.width/2-can.width/2, y: can.height/2 } ]
 		
 		makeWalls();
 		for(var i = 0; i < characters.length; i++) setRandomPosition(characters[i]);
 		resetDots();
 		drawAll();
-		/*
-		ctx1.fillStyle = "white";
-		ctx1.fillRect(130, 70, 430, 100);
-		ctx1.fillStyle = "red";
-		ctx1.font = "30px Arial";
-		ctx1.fillText("RatMan", 300, 100);
-		ctx1.fillText("Press any key to start!", 150, 150);
-		*/
+		ctx.fillStyle = "white";
+		ctx.fillRect(130, 70, 430, 100);
+		ctx.fillStyle = "red";
+		ctx.font = "30px Arial";
+		ctx.fillText("RatMan", 300, 100);
+		ctx.fillText("Press any key to start!", 150, 150);
         document.addEventListener("keydown", unPause, false);
         document.addEventListener("click", unPause, false);
 	}
 	
 	function makeWalls()
 	{
-		var tries = numberOfWalls * 40;
-		for(var i = 0; i < numberOfWalls && tries > 0; i++)
+		var triesLeft = maxTriesToPlaceWalls;
+		for(var i = 0; i < numberOfWalls && triesLeft > 0; i++)
 		{
-			tries++;
+			triesLeft--;
 			var direction = getRandomInt(0, 1);
 			var x1 = getRandomInt(0, blocksWide-1) * blockWidth;
 			var y1 = getRandomInt(0, blocksWide-1) * blockWidth;
@@ -106,14 +104,14 @@
 			if(!isWallAt(x1-blockWidth, y1-blockHeight, width1+blockWidth*2, height1+blockHeight*2)) walls.push( { x: x1, y: y1, width: width1, height: height1 } );
 			else i--;
 		}
-		if(tries == 0) console.log("ran out of wall space");
+		if(triesLeft == 0) console.log("ran out of wall space");
 	}
 	
 	function setRandomPosition(c)
 	{
 		c.x = -1;
 		c.y = -1;
-		while(!isValidMove(c.x, c.y, c.width, c.height) || isCharacterAt(c.x, c.y, null, c))
+		while(!isValidMove(c.x, c.y, c.width, c.height) || isCharacterAt(c.x, c.y, c.id))
 		{
 			c.x = getRandomInt(0, blocksWide-1)*blockWidth;
 			c.y = getRandomInt(0, blocksHigh-1)*blockHeight;
@@ -131,12 +129,12 @@
 		if(playerInterval) clearInterval(playerInterval);
 		if(characterInterval) clearInterval(characterInterval);
 		
-		ctx1.fillStyle = "white";
-		ctx1.fillRect(130, 70, 430, 100);
-		ctx1.fillStyle = "red";
-		ctx1.font = "30px Arial";
-		ctx1.fillText("RatMan", 300, 100);
-		ctx1.fillText("PAUSED! Press any key", 150, 150);
+		ctx.fillStyle = "white";
+		ctx.fillRect(130, 70, 430, 100);
+		ctx.fillStyle = "red";
+		ctx.font = "30px Arial";
+		ctx.fillText("RatMan", 300, 100);
+		ctx.fillText("PAUSED! Press any key", 150, 150);
 	}
 	
 	function showScore()
@@ -146,8 +144,8 @@
 
 	function drawAll()
 	{
-		ctx1.fillStyle = "white";
-		ctx1.fillRect(0, 0, can.width, can.height); // clear canvas
+		ctx.fillStyle = "white";
+		ctx.fillRect(0, 0, can.width, can.height); // clear canvas
 		drawDots();
 		drawWalls();
 		for(var i = 0; i < characters.length; i++) drawCharacter(characters[i]);
@@ -190,8 +188,8 @@
 	{
 		if(dots[y/blockWidth][x/blockWidth] == 1)
 		{
-			ctx1.fillStyle = "orange";
-			ctx1.fillRect(x+blockWidth/3, y+blockHeight/3, blockWidth/3, blockHeight/3);
+			ctx.fillStyle = "orange";
+			ctx.fillRect(x+blockWidth/3, y+blockHeight/3, blockWidth/3, blockHeight/3);
 		}
 	}
 	
@@ -230,8 +228,8 @@
 		for(var i = 0; i < walls.length; i++)
 		{
 			if(walls[i].color == undefined) walls[i].color = "black";
-			ctx1.fillStyle = walls[i].color;
-			ctx1.fillRect(walls[i].x, walls[i].y, walls[i].width, walls[i].height);
+			ctx.fillStyle = walls[i].color;
+			ctx.fillRect(walls[i].x, walls[i].y, walls[i].width, walls[i].height);
 		}
     }
 	
@@ -239,11 +237,33 @@
 	{
 		if(c.width == undefined) c.width = characterWidth;
 		if(c.height == undefined) c.height = characterHeight;
-		ctx1.fillStyle = bgColor;
-		ctx1.fillRect(c.oldX+characterOffset, c.oldY+characterOffset, c.width, c.height); // erase previous location
+
+		ctx.fillStyle = bgColor;
+		ctx.fillRect(c.oldX, c.oldY, blockWidth, blockHeight); // erase previous location
 		if(c.oldX) drawDot(c.oldX, c.oldY)
-		ctx1.fillStyle = c.color;
-		ctx1.fillRect(c.x+characterOffset, c.y+characterOffset, c.width, c.height);
+		ctx.fillStyle = bgColor;
+		ctx.fillRect(c.x, c.y, blockWidth, blockHeight); // erase current location
+		
+		ctx.fillStyle = c.color;
+		
+		if(c.id == 0)
+		{
+
+			ctx.beginPath();
+			ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, 0.2 * Math.PI, 1.8 * Math.PI, false); // body
+			ctx.lineTo(c.x + c.width/1.6, c.y + c.width/1.6); // mouth
+			ctx.closePath();
+			ctx.fill();
+			ctx.stroke();
+		}
+		else
+		{
+			ctx.beginPath();
+			ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, 0.2 * Math.PI, 2 * Math.PI, false); // body
+			ctx.closePath();
+			ctx.fill();
+			ctx.stroke();
+		}
 		c.oldX = c.x;
 		c.oldY = c.y;
     }
@@ -351,11 +371,11 @@
 		return false;
 	}
 	
-	function isCharacterAt(x, y, notCharacterNum, notCharacter)
+	function isCharacterAt(x, y, notCharacterId)
 	{
 		for(var i = 1; i < characters.length; i++)
 		{
-			if(i != notCharacterNum && characters[i] != notCharacter && x == characters[i].x && y == characters[i].y) return true;
+			if(characters[i].id != notCharacterId && x == characters[i].x && y == characters[i].y) return true;
 		}
 		return false;
 	}
