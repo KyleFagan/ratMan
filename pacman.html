@@ -1,38 +1,38 @@
 <!DOCTYPE html>
-<html> <!-- https://rawcdn.githack.com/KyleFagan/ratMan/defeb1024f5ca1b35c82702331b80d8c742c3b0e/pacman.html -->
+<html> <!-- Preview this at:   https://raw.githack.com/KyleFagan/ratMan/main/pacman.html -->
+	<head>
+	<style>
+		body { padding: 0px; margin: 0px; }
+	</style>
+	
     <script type="text/javascript">
 	"use strict"; 
 	
     var can, ctx;
+	var bgColor = "white";
 	var blocksWide = 20;
 	var blocksHigh = 20;
 	var blockWidth, blockHeight;
-	var numberOfWalls = 15;
-	var maxTriesToPlaceWalls = numberOfWalls * 40;
-	var wallMinLength = blocksWide/10;
-	var walls = [], characters, destinations;
-	var characterWidth, characterHeight, characterOffset;
-	var bgColor = "white";
+	var numberOfWalls = blocksWide;
+	var maxTriesToPlaceWalls = numberOfWalls * 100;
+	var wallMinLength = blocksWide / 10; // 2
+	var walls, characters, dots, destinations;
 	var audioContext = null;
 	var score = 0;
 	var lives = 3;
+	var dotsEaten = 0;
+	var enemiesEaten = 0;
+	var level = 1;
+	var playerSpeed = 250;
+	var characterSpeed = 300;
+	var specialDots = 25;
+
 	var invinsible = 0;
+	var superp = 0;
+
 	var playerInterval, characterInterval, drawAllInterval, mouthInterval;
 	var paused = true;
-	var dots;
-	var dotCount = 0;
 	
-	function create2dArray(rows, cols, value)
-	{
-		var arr = [];
-		for(var row = 0; row < rows; row++)
-		{
-			arr.push([]);
-			for(var col = 0; col < cols; col++) arr[row][col] = value;
-		}
-		return arr;
-	}
-
 	function beep(a) // beep({freq:520, duration:200, vol:100, delay:200, times:1}
 	{
 		if(!a.freq) a.freq = 500;
@@ -55,36 +55,66 @@
 
     function init()
 	{
-		dots = create2dArray(blocksHigh, blocksWide, 0);
         can = document.getElementById('can1');
 		can.style.backgroundColor = bgColor;
         ctx = can.getContext("2d");
-		
-		blockWidth = can.width / blocksWide;
-		blockHeight = can.height / blocksHigh;
-		characterWidth = blockWidth * .8;
-		characterHeight = blockHeight * .8;
-		characterOffset = blockWidth * .1;
-    
+		blockWidth = Math.floor(can.width / blocksWide);
+		blockHeight = Math.floor(can.height / blocksHigh);
 		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "red" }, { id: 4, color: "pink" } ];
-		destinations = [ { x: 0, y: 0 }, { x: can.width, y: 0 }, { x: 0, y: can.height }, { x: can.width, y: can.height }, { x: can.width/2-can.width/2, y: can.height/2 }, { x: can.width/2-can.width/2, y: can.height/2 } ]
-		
+		destinations = [ { x: 0, y: 0 }, { x: blocksWide*blockWidth, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide*blockWidth, y: blocksHigh*blockHeight } ]
+		restart();
+	}
+	
+	function restart()
+	{
+		reset();
+		showOpenMessage();
+	}
+	
+	function reset()
+	{
+		halt();
 		makeWalls();
 		for(var i = 0; i < characters.length; i++) setRandomPosition(characters[i]);
 		resetDots();
 		reDrawAll();
+		invinsible = 10;
+        document.addEventListener("keydown", playerDirection, false);
+	}
+	
+	function showOpenMessage()
+	{
+		ctx.fillStyle = "red";
+		ctx.fillRect(130, 70, 430, 90);
 		ctx.fillStyle = "white";
-		ctx.fillRect(130, 70, 430, 100);
+		ctx.fillRect(135, 75, 420, 80);
 		ctx.fillStyle = "red";
 		ctx.font = "30px Arial";
 		ctx.fillText("RatMan", 300, 100);
-		ctx.fillText("Press any key to start!", 150, 150);
-        document.addEventListener("keydown", unPause, false);
-        document.addEventListener("click", unPause, false);
+		ctx.fillStyle = "black";
+		ctx.fillText("Press any key to start!", 190, 125);
+		ctx.font = "20px Arial";
+		ctx.fillText("Press P to pause, R to reset game", 190, 150);
+	}
+	
+	function showPauseMessage()
+	{
+		ctx.fillStyle = "red";
+		ctx.fillRect(130, 70, 430, 90);
+		ctx.fillStyle = "white";
+		ctx.fillRect(135, 75, 420, 80);
+		ctx.fillStyle = "red";
+		ctx.font = "30px Arial";
+		ctx.fillText("RatMan", 300, 100);
+		ctx.fillStyle = "black";
+		ctx.fillText("Press any key to unpause!", 190, 125);
+		ctx.font = "20px Arial";
+		ctx.fillText("Press P to pause, R to reset game", 190, 150);
 	}
 	
 	function makeWalls()
 	{
+		walls = [];
 		var triesLeft = maxTriesToPlaceWalls;
 		for(var i = 0; i < numberOfWalls && triesLeft > 0; i++)
 		{
@@ -97,11 +127,15 @@
 			
 			if(direction == 0) height1 = blockHeight;
 			if(direction == 1) width1 = blockWidth;
-
 			if(direction == 0 && wallMinLength * blockWidth > width1) { i--; continue; }
 			if(direction == 1 && wallMinLength * blockHeight > height1) { i--; continue; }
 			
-			if(!isWallAt(x1-blockWidth, y1-blockHeight, width1+blockWidth*2, height1+blockHeight*2)) walls.push( { x: x1, y: y1, width: width1, height: height1 } );
+			if(
+				!isWallAt(x1-blockWidth, y1-blockHeight) &&
+				!isWallAt(x1, y1) &&
+				!isWallAt(x1+blockWidth, y1+blockHeight)
+				)
+				walls.push( { x: x1, y: y1, width: width1, height: height1 } );
 			else i--;
 		}
 		if(triesLeft == 0) console.log("ran out of wall space");
@@ -111,36 +145,42 @@
 	{
 		c.x = -1;
 		c.y = -1;
-		while(!isValidMove(c.x, c.y, c.width, c.height) || isCharacterAt(c.x, c.y, c.id))
+		//while(!isValidMove(c.x, c.y, c.width, c.height) || characterAt(c.x, c.y, c.id))
+		while(!isValidMove(c.x, c.y, c.width, c.height))
 		{
 			c.x = getRandomInt(0, blocksWide-1)*blockWidth;
 			c.y = getRandomInt(0, blocksHigh-1)*blockHeight;
-			var direction = getRandomInt(0, 3);
-			if(direction == 0) c.x = 0;
-			if(direction == 1) c.y = 0;
-			if(direction == 2) c.x = blockHeight*19;
-			if(direction == 3) c.y = blockHeight*19;
 		}
 	}
 	
 	function pause()
 	{
+		halt();
+		reDrawAll();
+		showPauseMessage();
+	}
+
+	function halt()
+	{
 		paused = true;
 		if(playerInterval) clearInterval(playerInterval);
 		if(characterInterval) clearInterval(characterInterval);
 		if(drawAllInterval) clearInterval(drawAllInterval);
-		
-		ctx.fillStyle = "white";
-		ctx.fillRect(130, 70, 430, 100);
-		ctx.fillStyle = "red";
-		ctx.font = "30px Arial";
-		ctx.fillText("RatMan", 300, 100);
-		ctx.fillText("PAUSED! Press any key", 150, 150);
+		if(mouthInterval) clearInterval(mouthInterval);
 	}
 	
 	function showScore()
 	{
-		document.getElementById("scoreBoard").innerHTML = "&nbsp; You have eaten: " + score + " cheese &nbsp; &nbsp; &nbsp; out of: " + dotCount + " &nbsp; &nbsp; &nbsp; lives: " + lives;
+		document.getElementById("scoreBoard").innerHTML =
+		" &nbsp; Level: " + level +
+		" &nbsp; Score: " + score +
+		" &nbsp; Dots eaten: " + dotsEaten + " of " + dots.length +
+		" &nbsp; Ghost eaten: " + enemiesEaten +
+		" &nbsp; Lives: " + lives +
+		" &nbsp; PlayerSpeed: " + playerSpeed +
+		" &nbsp; GhostSpeed: " + characterSpeed +
+		" &nbsp; sdots: " + specialDots +
+		"";
 	}
 
 	function reDrawAll()
@@ -149,37 +189,39 @@
 		ctx.fillRect(0, 0, can.width, can.height); // clear canvas
 		drawDots();
 		drawWalls();
-		drawAll();
+		drawAllLoop();
+		for(var i = characters.length-1; i >= 0; i--) drawCharacter(characters[i]);
+		showScore();
 	}
 	
-	function drawAll()
+	function drawAllLoop()
 	{
-		for(var i = 0; i < characters.length; i++) drawCharacter(characters[i]);
-		showScore();
-		window.requestAnimationFrame(drawAll);
-		//drawAllInterval = setInterval(drawAll, 1000/60);
+		if(!paused)
+		{
+			for(var i = characters.length-1; i >= 0; i--) drawCharacter(characters[i]);
+			showScore();
+			window.requestAnimationFrame(drawAllLoop);
+			//drawAllInterval = setInterval(drawAllLoop, 1000/60);
+		}
 	}
 	
 	function unPause()
 	{
-		if(event.keyCode < 32) return; // 32=space, 37-40=arrows, 65-90=a-7
+		if(event && event.keyCode < 32) return; // 32=space, 37-40=arrows, 65-90=a-7
 		paused = false;
-		document.removeEventListener("keydown", unPause);
-		document.removeEventListener("click", unPause);
-		//if(audioContext == null) audioContext = new AudioContext();
-        document.addEventListener("keydown", playerDirection, false);
-		playerInterval = setInterval(playerMove, 250);
-		characterInterval = setInterval(characterMove, 300);
+		if(audioContext == null) audioContext = new AudioContext();
+		playerInterval = setInterval(playerMove, playerSpeed);
+		characterInterval = setInterval(characterMove, characterSpeed);
 		mouthInterval = setInterval(openCloseMouth, 150);
 		reDrawAll();
     }
 	
-	function openCloseMouth() { mouthInterval = characters[0].mouthClosed = !characters[0].mouthClosed; }
+	function openCloseMouth() { characters[0].mouthClosed = !characters[0].mouthClosed; }
 
-	function death()
+	function playerDies()
 	{
 		beep({freq:120, duration: 400});
-		beep({freq:1000, duration: 10, delay: 500, times: 20});
+		beep({freq:1000, duration: 10, delay: 500, times: 20}); // invinsible beep
 		score = 0;
 		lives--;
 		invinsible = 15;
@@ -187,50 +229,76 @@
 
 	function eatDot(x, y)
 	{
-		if(dots[y/blockWidth][x/blockWidth] == 1)
+		var dot = getDot(x, y);
+		if(dot && !dot.eaten)
 		{
+			if(dot.special)
+			{
+				superp = 30;
+				beep({freq:1000, duration: 10, delay: 500, times: 20}); // invinsible beep
+			}
 			score++;
-			dots[y/blockWidth][x/blockWidth] = 0;
+			dotsEaten++;
+			dot.eaten = 1;
 			showScore();
+			if(dotsEaten == dots.length) levelUp();
 		}
+	}
+	
+	function levelUp()
+	{
+		characterSpeed -= 5;
+		if(characterSpeed < playerSpeed) characterSpeed = playerSpeed;
+		specialDots += 5
+		if(specialDots > 50) specialDots = 50;
+		dotsEaten = 0;
+		level++;
+		reset();
+		showOpenMessage();
+	}
+	
+	function getDot(x, y)
+	{
+		for(var i=0; i < dots.length; i++) if(dots[i].x == x && dots[i].y == y) return dots[i];
 	}
 	
 	function drawDot(x, y)
 	{
-		if(dots[y/blockWidth][x/blockWidth] == 1)
+		var dot = getDot(x, y);
+		if(dot && !dot.eaten)
 		{
+			var size = blockWidth/6;
 			ctx.fillStyle = "orange";
-			//ctx.fillRect(x+blockWidth/3, y+blockHeight/3, blockWidth/3, blockHeight/3);
+			if(dot.eaten) ctx.fillStyle = "black";
+			if(dot.special) ctx.fillStyle = "green";
+			if(dot.special) size = blockWidth/4;
 			ctx.beginPath();
-			ctx.arc(x+blockWidth/2, y+blockHeight/2, blockWidth/6, 0.2 * Math.PI, 2 * Math.PI, false); 
+			ctx.arc(dot.x+blockWidth/2, dot.y+blockHeight/2, size, 0.2 * Math.PI, 2 * Math.PI, false); 
 			ctx.fill();
-
-		}
-	}
-	
-	function drawDots()
-	{
-		for(var y = 0; y < can.width; y += blockWidth)
-		{
-			for(var x = 0; x < can.width; x += blockWidth)
-			{
-					drawDot(x, y);
-			}
 		}
 	}
 	
 	function resetDots()
 	{
-		for(var y = 0; y < can.width; y += blockWidth)
+		dots = [];
+		for(var y = 0; y < blocksWide; y++)
 		{
-			for(var x = 0; x < can.width; x += blockWidth)
+			for(var x = 0; x < blocksHigh; x++)
 			{
-				if(isValidMove(x, y, characterWidth, characterHeight))
+				if(isValidMove(x*blockWidth, y*blockHeight, blockWidth, blockHeight))
 				{
-					dots[y/blockWidth][x/blockWidth] = 1;
-					dotCount++;
+					var special = 0 == getRandomInt(0, specialDots);
+					dots.push({ x: x*blockWidth, y: y*blockHeight, special: special });
 				}
 			}
+		}
+	}
+	
+	function drawDots()
+	{
+		for(var i=0; i < dots.length; i++)
+		{
+			drawDot(dots[i].x, dots[i].y);
 		}
 	}
 	
@@ -246,8 +314,8 @@
 	
     function drawCharacter(c)
 	{
-		if(c.width == undefined) c.width = characterWidth;
-		if(c.height == undefined) c.height = characterHeight;
+		if(c.width == undefined) c.width = blockWidth*.8;
+		if(c.height == undefined) c.height = blockWidth*.8;
 
 		ctx.fillStyle = bgColor;
 		ctx.fillRect(c.oldX, c.oldY, blockWidth, blockHeight); // erase previous location
@@ -259,14 +327,16 @@
 		
 		if(c.id == 0)
 		{
+			if(invinsible) ctx.fillStyle = "white";
+			if(superp) ctx.fillStyle = "red";
 			ctx.beginPath();
 			var mouthOpenValue = 30;
 			// left, right, up, down (180, 0, 270?, 90?)
 			if(c.mouthClosed) mouthOpenValue = 1;
 			if (c.direction == 0) ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, (Math.PI / 180) * (179 - mouthOpenValue), (Math.PI / 180) * (180 + mouthOpenValue), true);
-			if (c.direction == 1) ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, (Math.PI / 180) * mouthOpenValue, (Math.PI / 180) * (360 - mouthOpenValue));
-			if (c.direction == 2) ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, (Math.PI / 180) * (269 - mouthOpenValue), (Math.PI / 180) * (270 + mouthOpenValue), true);
-			if (c.direction == 3) ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, (Math.PI / 180) * (89 + mouthOpenValue), (Math.PI / 180) * (90 - mouthOpenValue));
+			else if (c.direction == 1) ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, (Math.PI / 180) * mouthOpenValue, (Math.PI / 180) * (360 - mouthOpenValue));
+			else if (c.direction == 2) ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, (Math.PI / 180) * (269 - mouthOpenValue), (Math.PI / 180) * (270 + mouthOpenValue), true);
+			else ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, (Math.PI / 180) * (89 + mouthOpenValue), (Math.PI / 180) * (90 - mouthOpenValue));
 			ctx.lineTo(c.x + c.width/1.6, c.y + c.width/1.6); // mouth
 			ctx.closePath();
 			ctx.fill();
@@ -287,6 +357,7 @@
     function playerMove()
 	{
 		if(invinsible > 0) invinsible--;
+		if(superp > 0) superp--;
 		var c = characters[0];
 		var newX = c.x, newY = c.y, newDirection = c.direction;
 		
@@ -300,15 +371,26 @@
 			c.x = newX;
 			c.y = newY;
 			eatDot(c.x, c.y);
-			//drawCharacter(c);
-			if(isCharacterAt(c.x, c.y) && invinsible == 0) death();
+			var c = characterAt(c.x, c.y);
+			if(c && !superp && !invinsible) playerDies();
+			var c2 = characterAt(c.x, c.y);
+			if(c2 && !superp && !invinsible) playerDies();
+			if(c2 && superp) eatCharacter(c2);
 		}
     }
+	
+	function eatCharacter(c)
+	{
+		beep({freq:800, duration: 400});
+		enemiesEaten++;
+		setRandomPosition(c);
+	}
 	
     function playerDirection(e)
 	{
 		if(e.keyCode === 37 || e.keyCode === 39 || e.keyCode === 38 || e.keyCode === 40)
 		{
+			document.addEventListener("keydown", playerDirection, false);
 			var c = characters[0];
 			var newX = c.x, newX2 = c.x, newY = c.y, newY2 = c.y, newDirection = c.direction;
 			if(e.keyCode === 37) { newDirection = 0; newX -= blockWidth; newX2 -= blockWidth*2; }
@@ -319,6 +401,9 @@
 			if(isValidMove(newX2, newY2, c.width, c.height)) c.nextDirection = newDirection;
 		}
 		if(e.key == 'p') { if(!paused) pause(); else unPause(); }
+		else if(e.key == 'r') { score = 0; level = 0; restart(); }
+		else if(e.key == 'l') levelUp();
+		else if(paused) unPause();
     }
 	
     function characterMove()
@@ -332,20 +417,20 @@
 			var bestY = c.y;
 			var scramble = [ 0, 1, 2, 3 ];
 			scramble.sort(() => Math.random() - 0.5);
-			for(var i2 = 0; i2 < 4; i2++)
+			for(var i = 0; i < 4; i++)
 			{
 				var newX = c.x;
 				var newY = c.y;
-				if(i2 === scramble[0]) newX = c.x - blockWidth;
-				if(i2 === scramble[1]) newX = c.x + blockWidth;
-				if(i2 === scramble[2]) newY = c.y - blockHeight;
-				if(i2 === scramble[3]) newY = c.y + blockHeight;
+				if(i === scramble[0]) newX = c.x - blockWidth;
+				if(i === scramble[1]) newX = c.x + blockWidth;
+				if(i === scramble[2]) newY = c.y - blockHeight;
+				if(i === scramble[3]) newY = c.y + blockHeight;
 				if(!isValidMove(newX, newY, c.width, c.height)) continue;
 				
 				if(c.dest == undefined) c.dest = getRandomInt(0, destinations.length-1);
 				var destX = destinations[c.dest].x;
 				var destY = destinations[c.dest].y; 
-				if(playerDistance < 200) { destX = player.x; destY = player.y; }
+				if(!invinsible && !superp && playerDistance < 200) { destX = player.x; destY = player.y; }
 
 				var bestDistance = getDistance(destX, bestX, destY, bestY);
 				var newDistance = getDistance(destX, newX, destY, newY);
@@ -354,8 +439,8 @@
 			if(bestX == c.x && bestY == c.y) c.dest = getRandomInt(0, destinations.length-1); // stuck, change destination
 			c.x = bestX;
 			c.y = bestY;
-			if(isPlayerAt(c.x, c.y) && invinsible == 0) death();
-			//drawCharacter(c);
+			if(isPlayerAt(c.x, c.y) && !superp && !invinsible) playerDies();
+			if(isPlayerAt(c.x, c.y) && superp) setRandomPosition(c);
 		}
     }
 	
@@ -372,6 +457,7 @@
 		if(newX + width > can.width) return false;
 		if(newY < 0) return false;
 		if(newY + height > can.height) return false;
+		
 		return !isWallAt(newX, newY, width, height);
 	}
 	
@@ -379,20 +465,29 @@
 	{
 		for(var i = 0; i < walls.length; i++)
 		{
-			if(
-			newX + width >= walls[i].x &&
-			newX < walls[i].x + walls[i].width &&
-			newY + height >= walls[i].y &&
-			newY < walls[i].y + walls[i].height) return true;
+			if(collisionTest(newX, newY, width, height, walls[i].x, walls[i].y, walls[i].width, walls[i].height)) return true;
 		}
 		return false;
 	}
 	
-	function isCharacterAt(x, y, notCharacterId)
+	function collisionTest(x1, y1, width1, height1, x2, y2, width2, height2)
+	{
+		if(x1 == x2 && y1 == y2) return true;
+	/*
+		if(
+		x1 + width1 >= x2 &&
+		x1 < x2 + width2 &&
+		y1 + height1 >= y2 &&
+		y1 < y2 + height2) return true;
+		*/
+		return false;
+	}
+	
+	function characterAt(x, y, notCharacterId)
 	{
 		for(var i = 1; i < characters.length; i++)
 		{
-			if(characters[i].id != notCharacterId && x == characters[i].x && y == characters[i].y) return true;
+			if(characters[i].id != notCharacterId && x == characters[i].x && y == characters[i].y) return characters[i];
 		}
 		return false;
 	}
@@ -400,14 +495,18 @@
 	function isPlayerAt(x, y) { return characters[0].x == x && characters[0].y == y; }
 	
 	function getRandomInt(min, max)
-	{
-	  min = Math.ceil(min);
-	  max = Math.floor(max);
-	  return Math.floor(Math.random() * (max+1 - min) + min);
+	{	
+		var placeHolder;
+		if(min > max) { placeHolder = min; min = max; max = placeHolder; }
+		min = Math.ceil(min);
+		max = Math.floor(max);
+		if(max > 0) max++;
+		return Math.floor(Math.random() * (max - min) + min);
 	}
 	
     </script>
-    
+	</head>
+	
 	<body onload="init()" style="background-color: grey">
         <canvas id="can1" width="700" height="700" style="border:2px solid;"></canvas>
 		<div id='scoreBoard' style='background-color: white; width: 700px; '>test</div>
