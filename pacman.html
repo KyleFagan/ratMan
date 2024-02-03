@@ -7,7 +7,13 @@
 	
     <script type="text/javascript">
 	"use strict"; 
-	
+
+	window.onerror = function(msg, url, linenumber)
+	{
+		alert('Error message: '+msg+'\nURL: '+url+'\nLine Number: '+linenumber);
+		return true;
+	}
+
     var can, ctx;
 	var bgColor = "white";
 	var blocksWide = 20;
@@ -18,6 +24,7 @@
 	var wallMinLength = blocksWide / 10; // 2
 	var walls, characters, dots, destinations;
 	var audioContext = null;
+
 	var score = 0;
 	var lives = 3;
 	var dotsEaten = 0;
@@ -29,7 +36,8 @@
 
 	var invinsible = 0;
 	var superp = 0;
-
+	var ignoreKeysUntil = 0;
+	
 	var playerInterval, characterInterval, drawAllInterval, mouthInterval;
 	var paused = true;
 	
@@ -62,24 +70,33 @@
 		blockHeight = Math.floor(can.height / blocksHigh);
 		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "red" }, { id: 4, color: "pink" } ];
 		destinations = [ { x: 0, y: 0 }, { x: blocksWide*blockWidth, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide*blockWidth, y: blocksHigh*blockHeight } ]
-		restart();
+		resetGame();
+        document.addEventListener("keydown", processKeys, false);
 	}
 	
-	function restart()
+	function resetGame()
 	{
-		reset();
+		ignoreKeysUntil = new Date(new Date().getTime() + 500);
+		score = 0;
+		lives = 3;
+		dotsEaten = 0;
+		enemiesEaten = 0;
+		level = 1;
+		playerSpeed = 250;
+		characterSpeed = 300;
+		specialDots = 25;
+		resetLevel();
 		showOpenMessage();
 	}
 	
-	function reset()
+	function resetLevel()
 	{
 		halt();
 		makeWalls();
 		for(var i = 0; i < characters.length; i++) setRandomPosition(characters[i]);
+		invinsible = 10;
 		resetDots();
 		reDrawAll();
-		invinsible = 10;
-        document.addEventListener("keydown", playerDirection, false);
 	}
 	
 	function showOpenMessage()
@@ -225,6 +242,7 @@
 		score = 0;
 		lives--;
 		invinsible = 15;
+		if(lives <= 0) resetGame();
 	}
 
 	function eatDot(x, y)
@@ -253,7 +271,7 @@
 		if(specialDots > 50) specialDots = 50;
 		dotsEaten = 0;
 		level++;
-		reset();
+		resetLevel();
 		showOpenMessage();
 	}
 	
@@ -358,24 +376,22 @@
 	{
 		if(invinsible > 0) invinsible--;
 		if(superp > 0) superp--;
-		var c = characters[0];
-		var newX = c.x, newY = c.y, newDirection = c.direction;
+		var player = characters[0];
+		var newX = player.x, newY = player.y, newDirection = player.direction;
 		
-		if(newDirection === 0) newX = c.x - blockWidth;
-		if(newDirection === 1) newX = c.x + blockWidth;
-		if(newDirection === 2) newY = c.y - blockHeight;
-		if(newDirection === 3) newY = c.y + blockHeight;
+		if(newDirection === 0) newX = player.x - blockWidth;
+		if(newDirection === 1) newX = player.x + blockWidth;
+		if(newDirection === 2) newY = player.y - blockHeight;
+		if(newDirection === 3) newY = player.y + blockHeight;
 
-		if(isValidMove(newX, newY, c.width, c.height))
+		if(isValidMove(newX, newY, player.width, player.height))
 		{
-			c.x = newX;
-			c.y = newY;
-			eatDot(c.x, c.y);
-			var c = characterAt(c.x, c.y);
-			if(c && !superp && !invinsible) playerDies();
-			var c2 = characterAt(c.x, c.y);
-			if(c2 && !superp && !invinsible) playerDies();
-			if(c2 && superp) eatCharacter(c2);
+			player.x = newX;
+			player.y = newY;
+			eatDot(player.x, player.y);
+			var c = characterAt(player.x, player.y);
+			if(c != null && !superp && !invinsible) playerDies();
+			if(c != null && superp) eatCharacter(c);
 		}
     }
 	
@@ -386,24 +402,23 @@
 		setRandomPosition(c);
 	}
 	
-    function playerDirection(e)
+    function processKeys(e)
 	{
-		if(e.keyCode === 37 || e.keyCode === 39 || e.keyCode === 38 || e.keyCode === 40)
-		{
-			document.addEventListener("keydown", playerDirection, false);
-			var c = characters[0];
-			var newX = c.x, newX2 = c.x, newY = c.y, newY2 = c.y, newDirection = c.direction;
-			if(e.keyCode === 37) { newDirection = 0; newX -= blockWidth; newX2 -= blockWidth*2; }
-			if(e.keyCode === 39) { newDirection = 1; newX += blockWidth; newX2 += blockWidth*2; }
-			if(e.keyCode === 38) { newDirection = 2; newY -= blockHeight; newY2 -= blockWidth*2; }
-			if(e.keyCode === 40) { newDirection = 3; newY += blockHeight; newY2 += blockWidth*2; }
-			if(isValidMove(newX, newY, c.width, c.height)) c.direction = newDirection;
-			if(isValidMove(newX2, newY2, c.width, c.height)) c.nextDirection = newDirection;
-		}
-		if(e.key == 'p') { if(!paused) pause(); else unPause(); }
-		else if(e.key == 'r') { score = 0; level = 0; restart(); }
-		else if(e.key == 'l') levelUp();
-		else if(paused) unPause();
+		if(ignoreKeysUntil > 0 && ignoreKeysUntil > new Date().getTime()) return;
+		ignoreKeysUntil = 0;
+		if(e.ctrlKey) return; // ignore all ctrl keys
+		var c = characters[0];
+		var newX = c.x, newX2 = c.x, newY = c.y, newY2 = c.y, newDirection = c.direction;
+		if(e.key === "ArrowLeft" || e.key === "a") { newDirection = 0; newX -= blockWidth; newX2 -= blockWidth*2; }
+		if(e.key === "ArrowRight" || e.key === "d") { newDirection = 1; newX += blockWidth; newX2 += blockWidth*2; }
+		if(e.key === "ArrowUp" || e.key === "w") { newDirection = 2; newY -= blockHeight; newY2 -= blockWidth*2; }
+		if(e.key === "ArrowDown" || e.key === "s") { newDirection = 3; newY += blockHeight; newY2 += blockWidth*2; }
+		if(isValidMove(newX, newY, c.width, c.height)) c.direction = newDirection;
+
+		if(e.key === 'p') { if(!paused) pause(); else unPause(); }
+		else if(paused) unPause(); // anykey unpauses
+		if(e.key === 'r') resetGame();
+		if(e.key === 'l') levelUp();
     }
 	
     function characterMove()
@@ -472,14 +487,12 @@
 	
 	function collisionTest(x1, y1, width1, height1, x2, y2, width2, height2)
 	{
-		if(x1 == x2 && y1 == y2) return true;
-	/*
+		//if(x1 == x2 && y1 == y2) return true;
 		if(
 		x1 + width1 >= x2 &&
 		x1 < x2 + width2 &&
 		y1 + height1 >= y2 &&
 		y1 < y2 + height2) return true;
-		*/
 		return false;
 	}
 	
@@ -489,7 +502,7 @@
 		{
 			if(characters[i].id != notCharacterId && x == characters[i].x && y == characters[i].y) return characters[i];
 		}
-		return false;
+		return null;
 	}
 	
 	function isPlayerAt(x, y) { return characters[0].x == x && characters[0].y == y; }
