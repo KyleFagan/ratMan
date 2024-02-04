@@ -13,6 +13,8 @@
 		alert('Error message: '+msg+'\nURL: '+url+'\nLine Number: '+linenumber);
 		return true;
 	}
+	
+	var animationFrame = 0;
 
     var can, ctx;
 	var bgColor = "white";
@@ -23,7 +25,7 @@
 	var maxTriesToPlaceWalls = numberOfWalls * 100;
 	var wallMinLength = blocksWide / 10; // 2
 	var walls, characters, dots, destinations;
-	var audioContext = null;
+	var audioContext = new AudioContext();
 
 	var score = 0;
 	var lives = 3;
@@ -40,7 +42,25 @@
 	
 	var playerInterval, characterInterval, drawAllInterval, mouthInterval;
 	var paused = true;
+		
+	function doTheyIntersect(obj1, obj2)
+	{
+		return (obj1.x2 >= obj2.x1 && obj1.x1 <= obj2.x2 && obj1.y1 <= obj2.y2 && obj1.y2 >= obj2.y1);
+	}
 	
+	function testIt()
+	{
+		var a = { x1: 1, y1: 1, x2: 4, y2: 2 };
+		var b = { x1: 3, y1: 1, x2: 4, y2: 4 };
+		var c = { x1: 2, y1: 5, x2: 5, y2: 6 };
+
+		if(doTheyIntersect(a, b)) document.getElementById("scoreBoard").innerHTML = "A intersects B";
+		else document.getElementById("scoreBoard").innerHTML += "A does not intersect B<br>";
+
+		if(doTheyIntersect(a, c)) document.getElementById("scoreBoard").innerHTML = "A intersects C";
+		else document.getElementById("scoreBoard").innerHTML += "A does not intersect C<br>";
+	}
+
 	function beep(a) // beep({freq:520, duration:200, vol:100, delay:200, times:1}
 	{
 		if(!a.freq) a.freq = 500;
@@ -70,12 +90,16 @@
 		blockHeight = Math.floor(can.height / blocksHigh);
 		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "red" }, { id: 4, color: "pink" } ];
 		destinations = [ { x: 0, y: 0 }, { x: blocksWide*blockWidth, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide*blockWidth, y: blocksHigh*blockHeight } ]
+
 		resetGame();
         document.addEventListener("keydown", processKeys, false);
 	}
 	
 	function resetGame()
 	{
+		//beep({freq:120, duration: 400});
+		//beep({freq:120, duration: 400});
+		//beep({freq:1000, duration: 10, delay: 500, times: 20}); // invinsible beep
 		ignoreKeysUntil = new Date(new Date().getTime() + 500);
 		score = 0;
 		lives = 3;
@@ -86,7 +110,6 @@
 		characterSpeed = 300;
 		specialDots = 25;
 		resetLevel();
-		showOpenMessage();
 	}
 	
 	function resetLevel()
@@ -97,9 +120,10 @@
 		invinsible = 10;
 		resetDots();
 		reDrawAll();
+		showMessage("Press any key to start!");
 	}
 	
-	function showOpenMessage()
+	function showMessage(msg)
 	{
 		ctx.fillStyle = "red";
 		ctx.fillRect(130, 70, 430, 90);
@@ -109,26 +133,11 @@
 		ctx.font = "30px Arial";
 		ctx.fillText("RatMan", 300, 100);
 		ctx.fillStyle = "black";
-		ctx.fillText("Press any key to start!", 190, 125);
+		ctx.fillText(msg, 190, 125);
 		ctx.font = "20px Arial";
 		ctx.fillText("Press P to pause, R to reset game", 190, 150);
 	}
-	
-	function showPauseMessage()
-	{
-		ctx.fillStyle = "red";
-		ctx.fillRect(130, 70, 430, 90);
-		ctx.fillStyle = "white";
-		ctx.fillRect(135, 75, 420, 80);
-		ctx.fillStyle = "red";
-		ctx.font = "30px Arial";
-		ctx.fillText("RatMan", 300, 100);
-		ctx.fillStyle = "black";
-		ctx.fillText("Press any key to unpause!", 190, 125);
-		ctx.font = "20px Arial";
-		ctx.fillText("Press P to pause, R to reset game", 190, 150);
-	}
-	
+		
 	function makeWalls()
 	{
 		walls = [];
@@ -148,9 +157,9 @@
 			if(direction == 1 && wallMinLength * blockHeight > height1) { i--; continue; }
 			
 			if(
-				!isWallAt(x1-blockWidth, y1-blockHeight) &&
-				!isWallAt(x1, y1) &&
-				!isWallAt(x1+blockWidth, y1+blockHeight)
+				!isWallAt(x1-blockWidth, y1-blockHeight, width1, height1) &&
+				!isWallAt(x1+blockWidth, y1+blockHeight, width1, height1) &&
+				!isWallAt(x1, y1, blockWidth, blockHeight)
 				)
 				walls.push( { x: x1, y: y1, width: width1, height: height1 } );
 			else i--;
@@ -174,7 +183,7 @@
 	{
 		halt();
 		reDrawAll();
-		showPauseMessage();
+		showMessage("Press any key to unpause!");
 	}
 
 	function halt()
@@ -184,6 +193,7 @@
 		if(characterInterval) clearInterval(characterInterval);
 		if(drawAllInterval) clearInterval(drawAllInterval);
 		if(mouthInterval) clearInterval(mouthInterval);
+		animate();
 	}
 	
 	function showScore()
@@ -196,7 +206,6 @@
 		" &nbsp; Lives: " + lives +
 		" &nbsp; PlayerSpeed: " + playerSpeed +
 		" &nbsp; GhostSpeed: " + characterSpeed +
-		" &nbsp; sdots: " + specialDots +
 		"";
 	}
 
@@ -206,25 +215,25 @@
 		ctx.fillRect(0, 0, can.width, can.height); // clear canvas
 		drawDots();
 		drawWalls();
-		drawAllLoop();
 		for(var i = characters.length-1; i >= 0; i--) drawCharacter(characters[i]);
 		showScore();
 	}
 	
-	function drawAllLoop()
+	function animate()
 	{
 		if(!paused)
 		{
 			for(var i = characters.length-1; i >= 0; i--) drawCharacter(characters[i]);
 			showScore();
-			window.requestAnimationFrame(drawAllLoop);
-			//drawAllInterval = setInterval(drawAllLoop, 1000/60);
+			//if(invinsible > 0 && animationFrame % 10 == 0) beep({freq:1000, duration: 10}); // invinsible beep
+			//if(superp > 0 && animationFrame % 15 == 0) beep({freq:1000, duration: 10}); // invinsible beep
+			animationFrame++;
 		}
+		window.requestAnimationFrame(animate);
 	}
 	
 	function unPause()
 	{
-		if(event && event.keyCode < 32) return; // 32=space, 37-40=arrows, 65-90=a-7
 		paused = false;
 		if(audioContext == null) audioContext = new AudioContext();
 		playerInterval = setInterval(playerMove, playerSpeed);
@@ -237,8 +246,9 @@
 
 	function playerDies()
 	{
-		beep({freq:120, duration: 400});
-		beep({freq:1000, duration: 10, delay: 500, times: 20}); // invinsible beep
+		if(audioContext == null) audioContext = new AudioContext();
+		//beep({freq:120, duration: 400});
+		//beep({freq:1000, duration: 10, delay: 1500, times: 20}); // invinsible beep
 		score = 0;
 		lives--;
 		invinsible = 15;
@@ -253,7 +263,7 @@
 			if(dot.special)
 			{
 				superp = 30;
-				beep({freq:1000, duration: 10, delay: 500, times: 20}); // invinsible beep
+				//beep({freq:1000, duration: 10, delay: 500, times: 20}); // invinsible beep
 			}
 			score++;
 			dotsEaten++;
@@ -272,7 +282,6 @@
 		dotsEaten = 0;
 		level++;
 		resetLevel();
-		showOpenMessage();
 	}
 	
 	function getDot(x, y)
@@ -397,16 +406,17 @@
 	
 	function eatCharacter(c)
 	{
-		beep({freq:800, duration: 400});
+		//beep({freq:800, duration: 400});
 		enemiesEaten++;
 		setRandomPosition(c);
 	}
 	
     function processKeys(e)
 	{
+		if(e.ctrlKey) return; // ignore all ctrl keys
+		if(event.keyCode < 32) return; // ignore alt, tab, other strange command characters
 		if(ignoreKeysUntil > 0 && ignoreKeysUntil > new Date().getTime()) return;
 		ignoreKeysUntil = 0;
-		if(e.ctrlKey) return; // ignore all ctrl keys
 		var c = characters[0];
 		var newX = c.x, newX2 = c.x, newY = c.y, newY2 = c.y, newDirection = c.direction;
 		if(e.key === "ArrowLeft" || e.key === "a") { newDirection = 0; newX -= blockWidth; newX2 -= blockWidth*2; }
@@ -415,10 +425,10 @@
 		if(e.key === "ArrowDown" || e.key === "s") { newDirection = 3; newY += blockHeight; newY2 += blockWidth*2; }
 		if(isValidMove(newX, newY, c.width, c.height)) c.direction = newDirection;
 
-		if(e.key === 'p') { if(!paused) pause(); else unPause(); }
+		if(e.key === "p") { if(!paused) pause(); else unPause(); }
 		else if(paused) unPause(); // anykey unpauses
-		if(e.key === 'r') resetGame();
-		if(e.key === 'l') levelUp();
+		if(e.key === "r") resetGame();
+		if(e.key === "l") levelUp();
     }
 	
     function characterMove()
@@ -487,7 +497,6 @@
 	
 	function collisionTest(x1, y1, width1, height1, x2, y2, width2, height2)
 	{
-		//if(x1 == x2 && y1 == y2) return true;
 		if(
 		x1 + width1 >= x2 &&
 		x1 < x2 + width2 &&
