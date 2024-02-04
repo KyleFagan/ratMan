@@ -108,7 +108,6 @@
 		level = 1;
 		playerSpeed = 250;
 		characterSpeed = 300;
-		specialDots = 25;
 		resetLevel();
 	}
 	
@@ -314,7 +313,7 @@
 			{
 				if(isValidMove(x*blockWidth, y*blockHeight, blockWidth, blockHeight))
 				{
-					var special = 0 == getRandomInt(0, specialDots);
+					var special = (0 == getRandomInt(0, specialDots));
 					dots.push({ x: x*blockWidth, y: y*blockHeight, special: special });
 				}
 			}
@@ -346,7 +345,7 @@
 
 		ctx.fillStyle = bgColor;
 		ctx.fillRect(c.oldX, c.oldY, blockWidth, blockHeight); // erase previous location
-		if(c.oldX) drawDot(c.oldX, c.oldY)
+		if(c.oldX != null) drawDot(c.oldX, c.oldY)
 		ctx.fillStyle = bgColor;
 		ctx.fillRect(c.x, c.y, blockWidth, blockHeight); // erase current location
 		
@@ -414,7 +413,7 @@
     function processKeys(e)
 	{
 		if(e.ctrlKey) return; // ignore all ctrl keys
-		if(event.keyCode < 32) return; // ignore alt, tab, other strange command characters
+		if(event.keyCode < 32 || event.keyCode > 110) return; // ignore alt, tab, other strange command characters
 		if(ignoreKeysUntil > 0 && ignoreKeysUntil > new Date().getTime()) return;
 		ignoreKeysUntil = 0;
 		var c = characters[0];
@@ -498,9 +497,9 @@
 	function collisionTest(x1, y1, width1, height1, x2, y2, width2, height2)
 	{
 		if(
-		x1 + width1 >= x2 &&
+		x1 + width1 > x2 &&
 		x1 < x2 + width2 &&
-		y1 + height1 >= y2 &&
+		y1 + height1 > y2 &&
 		y1 < y2 + height2) return true;
 		return false;
 	}
