@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <html> <!-- Preview this at:   https://raw.githack.com/KyleFagan/ratMan/main/pacman.html -->
+	<head>
+		<meta name="viewport" content="width=device-width, user-scalable=no">
+        <style>
+			xbody { overscroll-behavior-y: contain; }
+			body { overscroll-behavior: none; }
+		</style>
+	</head>
+	
 	<body onload="init()">
-        <canvas style="float: left; border: 2px solid black" id="can1"></canvas>
+		<canvas style="float: left;" id="can1"></canvas>
 		<span id='scoreBoard' style='float: left; padding: 15px;'>test</span>
 	</body>
 
@@ -75,8 +83,8 @@
     function init()
 	{
         can = document.getElementById('can1');
-		can.width = document.documentElement.clientWidth;
-		can.height = document.documentElement.clientHeight;
+		can.width = document.documentElement.clientWidth-10;
+		can.height = document.documentElement.clientHeight-10;
 		if(can.width > can.height) can.width = can.height;
 		if(can.width < can.height) can.height = can.width;
 		can.style.backgroundColor = bgColor;
@@ -86,19 +94,19 @@
 		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "black" }, { id: 4, color: "pink" } ];
 		destinations = [ { x: 0, y: 0 }, { x: blocksWide*blockWidth, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide*blockWidth, y: blocksHigh*blockHeight } ]
 
-		can.addEventListener('touchstart', function(event)
+		document.addEventListener('touchstart', function(event)
 		{
 			event.preventDefault();
 			touchstartX = event.changedTouches[0].screenX;
 			touchstartY = event.changedTouches[0].screenY;
 		}, false);
 
-		can.addEventListener('touchmove', function(event)
+		document.addEventListener('touchmove', function(event)
 		{
 			event.preventDefault();
 		}, false);
 
-		can.addEventListener('touchend', function(event)
+		document.addEventListener('touchend', function(event)
 		{
 			event.preventDefault();
 			touchendX = event.changedTouches[0].screenX;
