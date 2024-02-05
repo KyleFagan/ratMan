@@ -59,14 +59,54 @@
 	{
 		var msg = "";
 		msg += "touchstartX: " + touchstartX + "<br>";
-		msg += "touchend: " + touchendX + "<br>";
+		msg += "touchendX: " + touchendX + "<br>";
 		msg += "touchstartY: " + touchstartY + "<br>";
 		msg += "touchendY: " + touchendY + "<br>";
 		document.getElementById("scoreBoard").innerHTML = msg;
-		//if (touchendY > touchstartY) alert(swiped + 'down!');
-		//if (touchendY < touchstartY) alert(swiped + 'up!');
+		if (touchendX > touchstartX+40) msg += "right!<br>";
+		if (touchendX < touchstartX-40) msg += "left!<br>";
+		if (touchendY > touchstartY+40) msg += "down!<br>";
+		if (touchendY < touchstartY-40) msg += "up!<br>";
 	}
 	
+	
+    function init()
+	{
+        can = document.getElementById('can1');
+		can.width = document.documentElement.clientWidth;
+		can.height = document.documentElement.clientHeight;
+		if(can.width > can.height) can.width = can.height;
+		if(can.width < can.height) can.height = can.width;
+		can.style.backgroundColor = bgColor;
+        ctx = can.getContext("2d");
+		blockWidth = Math.floor(can.width / blocksWide);
+		blockHeight = Math.floor(can.height / blocksHigh);
+		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "black" }, { id: 4, color: "pink" } ];
+		destinations = [ { x: 0, y: 0 }, { x: blocksWide*blockWidth, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide*blockWidth, y: blocksHigh*blockHeight } ]
+
+		can.addEventListener('touchstart', function(event)
+		{
+			e.preventDefault();
+			touchstartX = event.changedTouches[0].screenX;
+			touchstartY = event.changedTouches[0].screenY;
+		}, false);
+
+		can.addEventListener('touchmove', function(event)
+		{
+			e.preventDefault();
+		}, false);
+
+		can.addEventListener('touchend', function(event)
+		{
+			e.preventDefault();
+			touchendX = event.changedTouches[0].screenX;
+			touchendY = event.changedTouches[0].screenY;
+			handleSwipe();
+		}, false); 
+
+		resetGame();
+        document.addEventListener("keydown", processKeys, false);
+	}
 	
 	function beep(a) // beep({freq:520, duration:200, vol:100, delay:200, times:1}
 	{
@@ -88,42 +128,6 @@
 		if(a.times && !paused) setTimeout(function() {beep(a)}, a.delay);
 	}
 
-    function init()
-	{
-        can = document.getElementById('can1');
-		can.width = document.documentElement.clientWidth;
-		can.height = document.documentElement.clientHeight;
-		if(can.width > can.height) can.width = can.height;
-		if(can.width < can.height) can.height = can.width;
-		can.style.backgroundColor = bgColor;
-        ctx = can.getContext("2d");
-		blockWidth = Math.floor(can.width / blocksWide);
-		blockHeight = Math.floor(can.height / blocksHigh);
-		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "black" }, { id: 4, color: "pink" } ];
-		destinations = [ { x: 0, y: 0 }, { x: blocksWide*blockWidth, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide*blockWidth, y: blocksHigh*blockHeight } ]
-
-		can.addEventListener('touchstart', function(event)
-		{
-			touchstartX = event.changedTouches[0].screenX;
-			touchstartY = event.changedTouches[0].screenY;
-		}, false);
-
-		can.addEventListener('touchmove', function(event)
-		{
-			e.preventDefault();
-		}, false);
-
-		can.addEventListener('touchend', function(event)
-		{
-			touchendX = event.changedTouches[0].screenX;
-			touchendY = event.changedTouches[0].screenY;
-			handleSwipe();
-		}, false); 
-
-		resetGame();
-        document.addEventListener("keydown", processKeys, false);
-	}
-	
 	function resetGame()
 	{
 		//beep({freq:120, duration: 400});
