@@ -86,19 +86,19 @@
 
 		can.addEventListener('touchstart', function(event)
 		{
-			e.preventDefault();
+			event.preventDefault();
 			touchstartX = event.changedTouches[0].screenX;
 			touchstartY = event.changedTouches[0].screenY;
 		}, false);
 
 		can.addEventListener('touchmove', function(event)
 		{
-			e.preventDefault();
+			event.preventDefault();
 		}, false);
 
 		can.addEventListener('touchend', function(event)
 		{
-			e.preventDefault();
+			event.preventDefault();
 			touchendX = event.changedTouches[0].screenX;
 			touchendY = event.changedTouches[0].screenY;
 			handleSwipe();
