@@ -108,6 +108,11 @@
 			touchstartY = event.changedTouches[0].screenY;
 		}, false);
 
+		can.addEventListener('touchmove', function(event)
+		{
+			e.preventDefault();
+		}, false);
+
 		can.addEventListener('touchend', function(event)
 		{
 			touchendX = event.changedTouches[0].screenX;
