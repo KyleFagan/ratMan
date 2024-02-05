@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html> <!-- Preview this at:   https://raw.githack.com/KyleFagan/ratMan/main/pacman.html -->
-	<head>
-	<style>
-		body { padding: 0px; margin: 0px; }
-	</style>
-	
-    <script type="text/javascript">
+	<body onload="init()">
+        <canvas style="float: left; border: 2px solid black" id="can1"></canvas>
+		<span id='scoreBoard' style='float: left; padding: 15px;'>test</span>
+	</body>
+
+<script>
 	"use strict"; 
 
 	window.onerror = function(msg, url, linenumber)
@@ -18,23 +18,29 @@
 
     var can, ctx;
 	var bgColor = "white";
-	var blocksWide = 20;
-	var blocksHigh = 20;
+	var blocksWide = 10;
+	var blocksHigh = 10;
 	var blockWidth, blockHeight;
 	var numberOfWalls = blocksWide;
 	var maxTriesToPlaceWalls = numberOfWalls * 100;
-	var wallMinLength = blocksWide / 10; // 2
+	var wallMinLength = blocksWide / 10;
+	if(blocksHigh < blocksWide) wallMinLength = blocksHigh / 10;
 	var walls, characters, dots, destinations;
 	var audioContext = new AudioContext();
 
 	var score = 0;
 	var lives = 3;
+	var specialDots = blocksWide/2;
+	var scoreForEatingDots = 1;
+	var scoreForEatingSpecialDots = 5;
+	var scoreForEatingCharacter = 20;
+	var scoreForLevelUp = 50;
+
 	var dotsEaten = 0;
 	var enemiesEaten = 0;
 	var level = 1;
 	var playerSpeed = 250;
 	var characterSpeed = 300;
-	var specialDots = 25;
 
 	var invinsible = 0;
 	var superp = 0;
@@ -42,25 +48,8 @@
 	
 	var playerInterval, characterInterval, drawAllInterval, mouthInterval;
 	var paused = true;
-		
-	function doTheyIntersect(obj1, obj2)
-	{
-		return (obj1.x2 >= obj2.x1 && obj1.x1 <= obj2.x2 && obj1.y1 <= obj2.y2 && obj1.y2 >= obj2.y1);
-	}
 	
-	function testIt()
-	{
-		var a = { x1: 1, y1: 1, x2: 4, y2: 2 };
-		var b = { x1: 3, y1: 1, x2: 4, y2: 4 };
-		var c = { x1: 2, y1: 5, x2: 5, y2: 6 };
-
-		if(doTheyIntersect(a, b)) document.getElementById("scoreBoard").innerHTML = "A intersects B";
-		else document.getElementById("scoreBoard").innerHTML += "A does not intersect B<br>";
-
-		if(doTheyIntersect(a, c)) document.getElementById("scoreBoard").innerHTML = "A intersects C";
-		else document.getElementById("scoreBoard").innerHTML += "A does not intersect C<br>";
-	}
-
+	
 	function beep(a) // beep({freq:520, duration:200, vol:100, delay:200, times:1}
 	{
 		if(!a.freq) a.freq = 500;
@@ -84,11 +73,15 @@
     function init()
 	{
         can = document.getElementById('can1');
+		can.width = document.documentElement.clientWidth;
+		can.height = document.documentElement.clientHeight;
+		if(can.width > can.height) can.width = can.height;
+		if(can.width < can.height) can.height = can.width;
 		can.style.backgroundColor = bgColor;
         ctx = can.getContext("2d");
 		blockWidth = Math.floor(can.width / blocksWide);
 		blockHeight = Math.floor(can.height / blocksHigh);
-		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "red" }, { id: 4, color: "pink" } ];
+		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "black" }, { id: 4, color: "pink" } ];
 		destinations = [ { x: 0, y: 0 }, { x: blocksWide*blockWidth, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide*blockWidth, y: blocksHigh*blockHeight } ]
 
 		resetGame();
@@ -116,7 +109,7 @@
 		halt();
 		makeWalls();
 		for(var i = 0; i < characters.length; i++) setRandomPosition(characters[i]);
-		invinsible = 10;
+		invinsible = 2;
 		resetDots();
 		reDrawAll();
 		showMessage("Press any key to start!");
@@ -124,17 +117,21 @@
 	
 	function showMessage(msg)
 	{
-		ctx.fillStyle = "red";
-		ctx.fillRect(130, 70, 430, 90);
+		var width = 400;
+		var height = 85;
+		var x = can.width/2 - width/2;
+		var y = can.height/2 - height/2 -100;
+		ctx.fillStyle = "black";
+		ctx.fillRect(x, y, width, height);
 		ctx.fillStyle = "white";
-		ctx.fillRect(135, 75, 420, 80);
+		ctx.fillRect(x+5, y+5, width-10, height-10);
 		ctx.fillStyle = "red";
 		ctx.font = "30px Arial";
-		ctx.fillText("RatMan", 300, 100);
+		ctx.fillText("PacMan", x+30, y+30);
 		ctx.fillStyle = "black";
-		ctx.fillText(msg, 190, 125);
+		ctx.fillText(msg, x+30, y+55);
 		ctx.font = "20px Arial";
-		ctx.fillText("Press P to pause, R to reset game", 190, 150);
+		ctx.fillText("Press P to pause, R to reset game", x+30, y+75);
 	}
 		
 	function makeWalls()
@@ -146,9 +143,9 @@
 			triesLeft--;
 			var direction = getRandomInt(0, 1);
 			var x1 = getRandomInt(0, blocksWide-1) * blockWidth;
-			var y1 = getRandomInt(0, blocksWide-1) * blockWidth;
-			var width1 = getRandomInt(wallMinLength, blocksWide-(x1/blockWidth)) * blockWidth;
-			var height1 = getRandomInt(wallMinLength, blocksWide-(y1/blockHeight)) * blockHeight;
+			var y1 = getRandomInt(0, blocksHigh-1) * blockHeight;
+			var width1 = getRandomInt(wallMinLength, blocksWide-3-(x1/blockWidth)) * blockWidth;
+			var height1 = getRandomInt(wallMinLength, blocksHigh-3-(y1/blockHeight)) * blockHeight;
 			
 			if(direction == 0) height1 = blockHeight;
 			if(direction == 1) width1 = blockWidth;
@@ -159,8 +156,8 @@
 				!isWallAt(x1-blockWidth, y1-blockHeight, width1, height1) &&
 				!isWallAt(x1+blockWidth, y1+blockHeight, width1, height1) &&
 				!isWallAt(x1, y1, blockWidth, blockHeight)
-				)
-				walls.push( { x: x1, y: y1, width: width1, height: height1 } );
+				//!isWallAt(x1-blockWidth, y1-blockHeight, blockWidth*3, blockHeight*3)
+			) walls.push( { x: x1, y: y1, width: width1, height: height1 } );
 			else i--;
 		}
 		if(triesLeft == 0) console.log("ran out of wall space");
@@ -198,13 +195,13 @@
 	function showScore()
 	{
 		document.getElementById("scoreBoard").innerHTML =
-		" &nbsp; Level: " + level +
-		" &nbsp; Score: " + score +
-		" &nbsp; Dots eaten: " + dotsEaten + " of " + dots.length +
-		" &nbsp; Ghost eaten: " + enemiesEaten +
-		" &nbsp; Lives: " + lives +
-		" &nbsp; PlayerSpeed: " + playerSpeed +
-		" &nbsp; GhostSpeed: " + characterSpeed +
+		"Level: " + level + "<br>" +
+		"Score: " + score + "<br>" +
+		"Dots eaten: " + dotsEaten + " of " + dots.length + "<br>" +
+		"Ghost eaten: " + enemiesEaten + "<br>" +
+		"Lives: " + lives + "<br>" +
+		"PlayerSpeed: " + playerSpeed + "<br>" +
+		"GhostSpeed: " + characterSpeed + "<br>" +
 		"";
 	}
 
@@ -262,11 +259,12 @@
 			if(dot.special)
 			{
 				superp = 30;
+				score += scoreForEatingSpecialDots;
 				//beep({freq:1000, duration: 10, delay: 500, times: 20}); // invinsible beep
 			}
-			score++;
+			else score += scoreForEatingDots;
 			dotsEaten++;
-			dot.eaten = 1;
+			dot.eaten = true;
 			showScore();
 			if(dotsEaten == dots.length) levelUp();
 		}
@@ -274,6 +272,7 @@
 	
 	function levelUp()
 	{
+		score += scoreForLevelUp;
 		characterSpeed -= 5;
 		if(characterSpeed < playerSpeed) characterSpeed = playerSpeed;
 		specialDots += 5
@@ -307,16 +306,21 @@
 	function resetDots()
 	{
 		dots = [];
-		for(var y = 0; y < blocksWide; y++)
+		for(var x = 0; x < blocksWide; x++)
 		{
-			for(var x = 0; x < blocksHigh; x++)
+			for(var y = 0; y < blocksHigh; y++)
 			{
 				if(isValidMove(x*blockWidth, y*blockHeight, blockWidth, blockHeight))
 				{
-					var special = (0 == getRandomInt(0, specialDots));
-					dots.push({ x: x*blockWidth, y: y*blockHeight, special: special });
+					dots.push({ x: x*blockWidth, y: y*blockHeight });
 				}
 			}
+		}
+
+		for(var i=0; i < specialDots; i++)
+		{
+			var dot = dots[getRandomInt(0, dots.length-1)];
+			dot.special = true;
 		}
 	}
 	
@@ -332,7 +336,7 @@
 	{
 		for(var i = 0; i < walls.length; i++)
 		{
-			if(walls[i].color == undefined) walls[i].color = "black";
+			if(walls[i].color == undefined) walls[i].color = "brown";
 			ctx.fillStyle = walls[i].color;
 			ctx.fillRect(walls[i].x, walls[i].y, walls[i].width, walls[i].height);
 		}
@@ -351,19 +355,22 @@
 		
 		ctx.fillStyle = c.color;
 		
+		var num1 = 1.6; // 1.6
+		var num2 = 3; // 
+
 		if(c.id == 0)
 		{
-			if(invinsible) ctx.fillStyle = "white";
+			if(invinsible) ctx.fillStyle = "orange";
 			if(superp) ctx.fillStyle = "red";
 			ctx.beginPath();
 			var mouthOpenValue = 30;
 			// left, right, up, down (180, 0, 270?, 90?)
 			if(c.mouthClosed) mouthOpenValue = 1;
-			if (c.direction == 0) ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, (Math.PI / 180) * (179 - mouthOpenValue), (Math.PI / 180) * (180 + mouthOpenValue), true);
-			else if (c.direction == 1) ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, (Math.PI / 180) * mouthOpenValue, (Math.PI / 180) * (360 - mouthOpenValue));
-			else if (c.direction == 2) ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, (Math.PI / 180) * (269 - mouthOpenValue), (Math.PI / 180) * (270 + mouthOpenValue), true);
-			else ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, (Math.PI / 180) * (89 + mouthOpenValue), (Math.PI / 180) * (90 - mouthOpenValue));
-			ctx.lineTo(c.x + c.width/1.6, c.y + c.width/1.6); // mouth
+			if (c.direction == 0) ctx.arc(c.x+c.width/num1, c.y+c.width/num1, c.width/num2, (Math.PI / 180) * (179 - mouthOpenValue), (Math.PI / 180) * (180 + mouthOpenValue), true);
+			else if (c.direction == 1) ctx.arc(c.x+c.width/num1, c.y+c.width/num1, c.width/num2, (Math.PI / 180) * mouthOpenValue, (Math.PI / 180) * (360 - mouthOpenValue));
+			else if (c.direction == 2) ctx.arc(c.x+c.width/num1, c.y+c.width/num1, c.width/num2, (Math.PI / 180) * (269 - mouthOpenValue), (Math.PI / 180) * (270 + mouthOpenValue), true);
+			else ctx.arc(c.x+c.width/num1, c.y+c.width/num1, c.width/num2, (Math.PI / 180) * (89 + mouthOpenValue), (Math.PI / 180) * (90 - mouthOpenValue));
+			ctx.lineTo(c.x + c.width/num1, c.y + c.width/num1); // mouth
 			ctx.closePath();
 			ctx.fill();
 			ctx.stroke();
@@ -371,7 +378,7 @@
 		else
 		{
 			ctx.beginPath();
-			ctx.arc(c.x+c.width/1.6, c.y+c.width/1.6, c.width/2, 0, 2 * Math.PI, false); // body
+			ctx.arc(c.x+c.width/num1, c.y+c.width/num1, c.width/num2, 0, 2 * Math.PI, false); // body
 			ctx.closePath();
 			ctx.fill();
 			ctx.stroke();
@@ -407,6 +414,7 @@
 	{
 		//beep({freq:800, duration: 400});
 		enemiesEaten++;
+		score += scoreForEatingCharacter;
 		setRandomPosition(c);
 	}
 	
@@ -481,7 +489,6 @@
 		if(newX + width > can.width) return false;
 		if(newY < 0) return false;
 		if(newY + height > can.height) return false;
-		
 		return !isWallAt(newX, newY, width, height);
 	}
 	
@@ -517,24 +524,13 @@
 	
 	function getRandomInt(min, max)
 	{	
-		var placeHolder;
-		if(min > max) { placeHolder = min; min = max; max = placeHolder; }
+		if(min > max) { var temp = min; min = max; max = temp; }
 		min = Math.ceil(min);
 		max = Math.floor(max);
 		if(max > 0) max++;
 		return Math.floor(Math.random() * (max - min) + min);
 	}
-	
-    </script>
-	</head>
-	
-	<body onload="init()" style="background-color: grey">
-        <canvas id="can1" width="700" height="700" style="border:2px solid;"></canvas>
-		<div id='scoreBoard' style='background-color: white; width: 700px; '>test</div>
-	</body>
-</html>
-		
-		
-		
-		
  
+</script>
+
+</html>
