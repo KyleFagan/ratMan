@@ -57,16 +57,18 @@
 
 	function handleSwipe()
 	{
-		var msg = "";
-		msg += "touchstartX: " + touchstartX + "<br>";
-		msg += "touchendX: " + touchendX + "<br>";
-		msg += "touchstartY: " + touchstartY + "<br>";
-		msg += "touchendY: " + touchendY + "<br>";
-		document.getElementById("scoreBoard").innerHTML = msg;
-		if (touchendX > touchstartX+40) msg += "right!<br>";
-		if (touchendX < touchstartX-40) msg += "left!<br>";
-		if (touchendY > touchstartY+40) msg += "down!<br>";
-		if (touchendY < touchstartY-40) msg += "up!<br>";
+		var c = characters[0];
+		var newX = c.x, newX2 = c.x, newY = c.y, newY2 = c.y, newDirection = c.direction;
+
+		if(touchendX < touchstartX-40) { newDirection = 0; newX -= blockWidth; newX2 -= blockWidth*2; } // left
+		if(touchendX > touchstartX+40) { newDirection = 1; newX += blockWidth; newX2 += blockWidth*2; } // right
+		if(touchendY < touchstartY-40) { newDirection = 2; newY -= blockHeight; newY2 -= blockWidth*2; } // up
+		if(touchendY > touchstartY+40) { newDirection = 3; newY += blockHeight; newY2 += blockWidth*2; } // down
+		if(isValidMove(newX, newY, c.width, c.height)) c.direction = newDirection;
+
+		if(paused && (Math.abs(touchendY-touchstartY) > 40 || Math.abs(touchendX-touchstartX) > 40)) unPause();
+
+		if(Math.abs(touchendY-touchstartY) > 200 && Math.abs(touchendX-touchstartX) > 200) resetGame();
 	}
 	
 	
@@ -102,6 +104,10 @@
 			touchendX = event.changedTouches[0].screenX;
 			touchendY = event.changedTouches[0].screenY;
 			handleSwipe();
+			touchstartX = 0;
+			touchstartY = 0;
+			touchendX = 0;
+			touchendY = 0;
 		}, false); 
 
 		resetGame();
@@ -464,6 +470,7 @@
 		if(event.keyCode < 32 || event.keyCode > 110) return; // ignore alt, tab, other strange command characters
 		if(ignoreKeysUntil > 0 && ignoreKeysUntil > new Date().getTime()) return;
 		ignoreKeysUntil = 0;
+
 		var c = characters[0];
 		var newX = c.x, newX2 = c.x, newY = c.y, newY2 = c.y, newDirection = c.direction;
 		if(e.key === "ArrowLeft" || e.key === "a") { newDirection = 0; newX -= blockWidth; newX2 -= blockWidth*2; }
@@ -574,8 +581,3 @@
 </script>
 
 </html>
-		
-		
-		
-		
- 
