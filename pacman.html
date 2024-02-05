@@ -48,6 +48,24 @@
 	
 	var playerInterval, characterInterval, drawAllInterval, mouthInterval;
 	var paused = true;
+
+	var touchstartY = 0;
+	var touchendY = 0;
+	var touchstartX = 0;
+	var touchendX = 0;
+	
+
+	function handleSwipe()
+	{
+		var msg = "";
+		msg += "touchstartX: " + touchstartX + "<br>";
+		msg += "touchend: " + touchendX + "<br>";
+		msg += "touchstartY: " + touchstartY + "<br>";
+		msg += "touchendY: " + touchendY + "<br>";
+		document.getElementById("scoreBoard").innerHTML = msg;
+		//if (touchendY > touchstartY) alert(swiped + 'down!');
+		//if (touchendY < touchstartY) alert(swiped + 'up!');
+	}
 	
 	
 	function beep(a) // beep({freq:520, duration:200, vol:100, delay:200, times:1}
@@ -83,6 +101,19 @@
 		blockHeight = Math.floor(can.height / blocksHigh);
 		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "black" }, { id: 4, color: "pink" } ];
 		destinations = [ { x: 0, y: 0 }, { x: blocksWide*blockWidth, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide*blockWidth, y: blocksHigh*blockHeight } ]
+
+		can.addEventListener('touchstart', function(event)
+		{
+			touchstartX = event.changedTouches[0].screenX;
+			touchstartY = event.changedTouches[0].screenY;
+		}, false);
+
+		can.addEventListener('touchend', function(event)
+		{
+			touchendX = event.changedTouches[0].screenX;
+			touchendY = event.changedTouches[0].screenY;
+			handleSwipe();
+		}, false); 
 
 		resetGame();
         document.addEventListener("keydown", processKeys, false);
@@ -534,3 +565,8 @@
 </script>
 
 </html>
+		
+		
+		
+		
+ 
