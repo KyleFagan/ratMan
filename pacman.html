@@ -57,26 +57,26 @@
 	var playerInterval, characterInterval, drawAllInterval, mouthInterval;
 	var paused = true;
 
+	var mousestartY = 0;
+	var mousestartX = 0;
 	var touchstartY = 0;
-	var touchendY = 0;
 	var touchstartX = 0;
-	var touchendX = 0;
 	
 
-	function handleSwipe()
+	function handleSwipe(x1, y1, x2, y2)
 	{
 		var c = characters[0];
 		var newX = c.x, newX2 = c.x, newY = c.y, newY2 = c.y, newDirection = c.direction;
 
-		if(touchendX < touchstartX-40) { newDirection = 0; newX -= blockWidth; newX2 -= blockWidth*2; } // left
-		if(touchendX > touchstartX+40) { newDirection = 1; newX += blockWidth; newX2 += blockWidth*2; } // right
-		if(touchendY < touchstartY-40) { newDirection = 2; newY -= blockHeight; newY2 -= blockWidth*2; } // up
-		if(touchendY > touchstartY+40) { newDirection = 3; newY += blockHeight; newY2 += blockWidth*2; } // down
+		if(x2 < x1-40) { newDirection = 0; newX -= blockWidth; newX2 -= blockWidth*2; } // left
+		if(x2 > x1+40) { newDirection = 1; newX += blockWidth; newX2 += blockWidth*2; } // right
+		if(y2 < y1-40) { newDirection = 2; newY -= blockHeight; newY2 -= blockWidth*2; } // up
+		if(y2 > y1+40) { newDirection = 3; newY += blockHeight; newY2 += blockWidth*2; } // down
 		if(isValidMove(newX, newY, c.width, c.height)) c.direction = newDirection;
 
-		if(paused && (Math.abs(touchendY-touchstartY) > 40 || Math.abs(touchendX-touchstartX) > 40)) unPause();
+		if(paused && (Math.abs(y2-y1) > 40 || Math.abs(x2-x1) > 40)) unPause();
 
-		if(Math.abs(touchendY-touchstartY) > 200 && Math.abs(touchendX-touchstartX) > 200) resetGame();
+		if(Math.abs(y2-y1) > 200 && Math.abs(x2-x1) > 200) resetGame();
 	}
 	
 	
@@ -94,6 +94,20 @@
 		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "black" }, { id: 4, color: "pink" } ];
 		destinations = [ { x: 0, y: 0 }, { x: blocksWide*blockWidth, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide*blockWidth, y: blocksHigh*blockHeight } ]
 
+		document.addEventListener('mousedown', function(event)
+		{
+			mousestartX = event.pageX;
+			mousestartY = event.pageY;
+		}, false);
+		
+		document.addEventListener('mouseup', function(event)
+		{
+			event.preventDefault();
+			handleSwipe(mousestartX, mousestartY, event.pageX, event.pageY);
+			mousestartX = 0;
+			mousestartY = 0;
+		}, false); 
+
 		document.addEventListener('touchstart', function(event)
 		{
 			event.preventDefault();
@@ -109,13 +123,9 @@
 		document.addEventListener('touchend', function(event)
 		{
 			event.preventDefault();
-			touchendX = event.changedTouches[0].screenX;
-			touchendY = event.changedTouches[0].screenY;
-			handleSwipe();
+			handleSwipe(touchstartX, touchstartY, event.changedTouches[0].screenX, event.changedTouches[0].screenY);
 			touchstartX = 0;
 			touchstartY = 0;
-			touchendX = 0;
-			touchendY = 0;
 		}, false); 
 
 		resetGame();
