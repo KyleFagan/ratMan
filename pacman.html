@@ -94,6 +94,11 @@
 		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "black" }, { id: 4, color: "pink" } ];
 		destinations = [ { x: 0, y: 0 }, { x: blocksWide*blockWidth, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide*blockWidth, y: blocksHigh*blockHeight } ]
 
+can.addEventListener("touchstart",  function(event) {event.preventDefault()})
+can.addEventListener("touchmove",   function(event) {event.preventDefault()})
+can.addEventListener("touchend",    function(event) {event.preventDefault()})
+can.addEventListener("touchcancel", function(event) {event.preventDefault()})
+
 		document.addEventListener('mousedown', function(event)
 		{
 			mousestartX = event.pageX;
@@ -116,6 +121,11 @@
 		}, false);
 
 		document.addEventListener('touchmove', function(event)
+		{
+			event.preventDefault();
+		}, false);
+
+		document.addEventListener('touchcancel', function(event)
 		{
 			event.preventDefault();
 		}, false);
