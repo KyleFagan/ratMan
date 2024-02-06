@@ -26,6 +26,8 @@
 
     var can, ctx;
 	var bgColor = "white";
+	var wallColor = "brown";
+	var deadColor = "black";
 	var blocksWide = 8;
 	var blocksHigh = 8;
 	var blockWidth, blockHeight;
@@ -47,8 +49,8 @@
 	var dotsEaten = 0;
 	var enemiesEaten = 0;
 	var level = 1;
-	var playerSpeed = 250;
-	var characterSpeed = 300;
+	var playerSpeed = 300;
+	var characterSpeed = 400;
 
 	var invinsible = 0;
 	var superp = 0;
@@ -91,8 +93,10 @@
         ctx = can.getContext("2d");
 		blockWidth = Math.floor(can.width / blocksWide);
 		blockHeight = Math.floor(can.height / blocksHigh);
-		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "black" }, { id: 4, color: "pink" } ];
+		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "cyan" }, { id: 4, color: "pink" } ];
 		destinations = [ { x: 0, y: 0 }, { x: blocksWide*blockWidth, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide*blockWidth, y: blocksHigh*blockHeight } ]
+
+		resetGame();
 
 		can.addEventListener("touchstart",  function(event) {event.preventDefault()}, {passive: false})
 		can.addEventListener("touchmove",   function(event) {event.preventDefault()}, {passive: false})
@@ -120,15 +124,8 @@
 			touchstartY = event.changedTouches[0].screenY;
 		}, {passive: false});
 
-		document.addEventListener('touchmove', function(event)
-		{
-			event.preventDefault();
-		}, {passive: false});
-
-		document.addEventListener('touchcancel', function(event)
-		{
-			event.preventDefault();
-		}, {passive: false});
+		document.addEventListener('touchmove', function(event) { event.preventDefault(); }, {passive: false});
+		document.addEventListener('touchcancel', function(event) { event.preventDefault(); }, {passive: false});
 
 		document.addEventListener('touchend', function(event)
 		{
@@ -138,7 +135,6 @@
 			touchstartY = 0;
 		}, {passive: false}); 
 
-		resetGame();
         document.addEventListener("keydown", processKeys, false);
 	}
 	
@@ -173,8 +169,8 @@
 		dotsEaten = 0;
 		enemiesEaten = 0;
 		level = 1;
-		playerSpeed = 250;
-		characterSpeed = 300;
+		playerSpeed = 300;
+		characterSpeed = 400;
 		resetLevel();
 	}
 	
@@ -349,8 +345,6 @@
 		score += scoreForLevelUp;
 		characterSpeed -= 5;
 		if(characterSpeed < playerSpeed) characterSpeed = playerSpeed;
-		specialDots += 5
-		if(specialDots > 50) specialDots = 50;
 		dotsEaten = 0;
 		level++;
 		resetLevel();
@@ -410,7 +404,7 @@
 	{
 		for(var i = 0; i < walls.length; i++)
 		{
-			if(walls[i].color == undefined) walls[i].color = "brown";
+			if(walls[i].color == undefined) walls[i].color = wallColor;
 			ctx.fillStyle = walls[i].color;
 			ctx.fillRect(walls[i].x, walls[i].y, walls[i].width, walls[i].height);
 		}
@@ -428,6 +422,7 @@
 		ctx.fillRect(c.x, c.y, blockWidth, blockHeight); // erase current location
 		
 		ctx.fillStyle = c.color;
+		if(c.dead > 0) ctx.fillStyle = deadColor;
 		
 		var num1 = 1.6; // 1.6
 		var num2 = 3; // 
@@ -489,7 +484,8 @@
 		//beep({freq:800, duration: 400});
 		enemiesEaten++;
 		score += scoreForEatingCharacter;
-		setRandomPosition(c);
+		//setRandomPosition(c);
+		c.dead = 30;
 	}
 	
     function processKeys(e)
@@ -519,6 +515,7 @@
 		for(var characterNum = 1; characterNum < characters.length; characterNum++)
 		{
 			var c = characters[characterNum];
+			if(c.dead > 0) { c.dead--; continue; }
 			var playerDistance = getDistance(player.x, c.x, player.y, c.y);
 			var bestX = c.x;
 			var bestY = c.y;
@@ -546,8 +543,8 @@
 			if(bestX == c.x && bestY == c.y) c.dest = getRandomInt(0, destinations.length-1); // stuck, change destination
 			c.x = bestX;
 			c.y = bestY;
-			if(isPlayerAt(c.x, c.y) && !superp && !invinsible) playerDies();
-			if(isPlayerAt(c.x, c.y) && superp) setRandomPosition(c);
+			//if(isPlayerAt(c.x, c.y) && !superp && !invinsible) playerDies();
+			//if(isPlayerAt(c.x, c.y) && superp) setRandomPosition(c);
 		}
     }
 	
@@ -609,8 +606,3 @@
 </script>
 
 </html>
-		
-		
-		
-		
- 
