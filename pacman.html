@@ -9,7 +9,7 @@
 	</head>
 	
 	<body onload="init()">
-		<canvas style="float: left;" id="can1"></canvas>
+		<canvas style="float: left; border: 1px solid black" id="can1"></canvas>
 		<span id='scoreBoard' style='float: left; padding: 15px;'>test</span>
 	</body>
 
@@ -22,20 +22,38 @@
 		return true;
 	}
 	
+	var red = "rgba(255, 0, 0, 0.8)";
+	var green = "rgba(0, 255, 0, 0.8)";
+	var blue = "rgba(0, 0, 255, 0.8)";
+	var cyan = "rgba(0, 255, 255, 0.8)";
+	var orange = "rgba(255, 165,0, 0.8)";
+	var yellow = "rgba(255, 255, 204, 0.8)";
+	var lightYellow = "rgba(255, 255, 224, 0.8)";
+	var pink = "rgba(255, 192, 204, 0.8)";
+	var purple = "rgba(160, 32, 240, 0.8)";
+	var grey = "rgba(128, 128, 128, 0.8)";
+	var black = "rgba(0, 0, 0, 0.8)";
+	var white = "rgba(255, 255, 255,0.8)";
+	
 	var animationFrame = 0;
+	var speedDivisor = 5;
+
+	var left = 0;
+	var right = 1;
+	var up = 2;
+	var down = 3;
 
     var can, ctx;
 	var bgColor = "white";
 	var wallColor = "brown";
 	var deadColor = "black";
-	var blocksWide = 8;
-	var blocksHigh = 8;
+	var blocksWide = 10;
+	var blocksHigh = 10;
 	var blockWidth, blockHeight;
-	var numberOfWalls = blocksWide;
+	var numberOfWalls = blocksWide-2;
 	var maxTriesToPlaceWalls = numberOfWalls * 100;
-	var wallMinLength = blocksWide / 10;
-	if(blocksHigh < blocksWide) wallMinLength = blocksHigh / 10;
-	var walls, characters, dots, destinations;
+	var wallMinLength = 3;
+	var walls = [], characters = [], dots = [], destinations = [];
 	var audioContext = new AudioContext();
 
 	var score = 0;
@@ -68,34 +86,82 @@
 	function handleSwipe(x1, y1, x2, y2)
 	{
 		var c = characters[0];
-		var newX = c.x, newX2 = c.x, newY = c.y, newY2 = c.y, newDirection = c.direction;
-
-		if(x2 < x1-40) { newDirection = 0; newX -= blockWidth; newX2 -= blockWidth*2; } // left
-		if(x2 > x1+40) { newDirection = 1; newX += blockWidth; newX2 += blockWidth*2; } // right
-		if(y2 < y1-40) { newDirection = 2; newY -= blockHeight; newY2 -= blockWidth*2; } // up
-		if(y2 > y1+40) { newDirection = 3; newY += blockHeight; newY2 += blockWidth*2; } // down
-		if(isValidMove(newX, newY, c.width, c.height)) c.direction = newDirection;
+		var newX = c.x, newY = c.y, newDirection = c.direction;
+		if(x2 < x1-40) { newDirection = 0; newX -= blockWidth; } // left
+		if(x2 > x1+40) { newDirection = 1; newX += blockWidth; } // right
+		if(y2 < y1-40) { newDirection = 2; newY -= blockHeight; } // up
+		if(y2 > y1+40) { newDirection = 3; newY += blockHeight; } // down
+		if(isValidMove(newX, newY, blockWidth, blockHeight)) c.direction = newDirection;
 
 		if(paused && (Math.abs(y2-y1) > 40 || Math.abs(x2-x1) > 40)) unPause();
 
 		if(Math.abs(y2-y1) > 200 && Math.abs(x2-x1) > 200) resetGame();
 	}
 	
+	function testBlocks()
+	{
+		for(var x = 0; x < blocksWide; x++)
+		{
+			for(var y = 0; y < blocksWide; y++)
+			{
+				ctx.fillStyle = "yellow";
+				if(characterAt(x*blockWidth+5, y*blockHeight+5, blockWidth-10, blockHeight-10))
+				{
+					ctx.fillStyle = "red";
+					ctx.fillRect(x*blockWidth+blockWidth/2, y*blockHeight+blockWidth/2, 20, 20);
+				}
+				if(wallAt(x*blockWidth+5, y*blockHeight+5, blockWidth-10, blockHeight-10))
+				{
+					ctx.fillStyle = "green";
+					ctx.fillRect(x*blockWidth+blockWidth/2+20, y*blockHeight+blockWidth/2+20, 20, 20);
+				}
+			}
+		}
+	}
+	
+	function makeCharacters()
+	{
+		for(var i = 0; i < characters.length; i++)
+		{
+			var c = characters[i];
+			setRandomPosition(c);
+			c.width = blockWidth;
+			c.height = blockHeight;
+			while(wallAt(c.x, c.y, c.width, c.height)) setRandomPosition(c);
+			drawCharacter(c);
+		}
+	}
 	
     function init()
 	{
         can = document.getElementById('can1');
-		can.width = document.documentElement.clientWidth-10;
-		can.height = document.documentElement.clientHeight-10;
+		//can.width = document.documentElement.clientWidth-10;
+		//can.height = document.documentElement.clientHeight-10;
+		can.width = 700;
+		can.height = 700;
 		if(can.width > can.height) can.width = can.height;
 		if(can.width < can.height) can.height = can.width;
 		can.style.backgroundColor = bgColor;
         ctx = can.getContext("2d");
+		//ctx.globalAlpha = 0.9;
+		
 		blockWidth = Math.floor(can.width / blocksWide);
 		blockHeight = Math.floor(can.height / blocksHigh);
-		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "cyan" }, { id: 4, color: "pink" } ];
+		
+		characters = [ { id: 0, color: yellow }, { id: 1, color: blue }, { id: 2, color: purple }, { id: 3, color: cyan }, { id: 4, color: pink } ];
 		destinations = [ { x: 0, y: 0 }, { x: blocksWide*blockWidth, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide*blockWidth, y: blocksHigh*blockHeight } ]
 
+		makeCharacters();
+
+		var testing = false;
+		if(testing)
+		{
+			//walls.push( { x: blockWidth*1, y: blockHeight*1, width: blockWidth*3+10, height: blockHeight } );
+			makeWalls();
+			drawWalls();
+			testBlocks();
+		}
+		
 		resetGame();
 
 		can.addEventListener("touchstart",  function(event) {event.preventDefault()}, {passive: false})
@@ -166,8 +232,6 @@
 		ignoreKeysUntil = new Date(new Date().getTime() + 500);
 		score = 0;
 		lives = 3;
-		dotsEaten = 0;
-		enemiesEaten = 0;
 		level = 1;
 		playerSpeed = 300;
 		characterSpeed = 400;
@@ -178,8 +242,15 @@
 	{
 		halt();
 		makeWalls();
-		for(var i = 0; i < characters.length; i++) setRandomPosition(characters[i]);
-		invinsible = 2;
+		for(var i = 0; i < characters.length; i++)
+		{
+			characters[i].dead = 0;
+			setRandomPosition(characters[i]);
+		}
+		invinsible = 2 * speedDivisor;
+		superp = 0;
+		dotsEaten = 0;
+		enemiesEaten = 0;
 		resetDots();
 		reDrawAll();
 		showMessage("Press any key to start!");
@@ -212,8 +283,8 @@
 		{
 			triesLeft--;
 			var direction = getRandomInt(0, 1);
-			var x1 = getRandomInt(0, blocksWide-1) * blockWidth;
-			var y1 = getRandomInt(0, blocksHigh-1) * blockHeight;
+			var x1 = getRandomInt(1, blocksWide-2) * blockWidth;
+			var y1 = getRandomInt(1, blocksHigh-2) * blockHeight;
 			var width1 = getRandomInt(wallMinLength, blocksWide-3-(x1/blockWidth)) * blockWidth;
 			var height1 = getRandomInt(wallMinLength, blocksHigh-3-(y1/blockHeight)) * blockHeight;
 			
@@ -223,10 +294,10 @@
 			if(direction == 1 && wallMinLength * blockHeight > height1) { i--; continue; }
 			
 			if(
-				!isWallAt(x1-blockWidth, y1-blockHeight, width1, height1) &&
-				!isWallAt(x1+blockWidth, y1+blockHeight, width1, height1) &&
-				!isWallAt(x1, y1, blockWidth, blockHeight)
-				//!isWallAt(x1-blockWidth, y1-blockHeight, blockWidth*3, blockHeight*3)
+				!wallAt(x1-blockWidth, y1-blockHeight, width1, height1) &&
+				!wallAt(x1+blockWidth, y1+blockHeight, width1, height1) &&
+				!wallAt(x1, y1, blockWidth, blockHeight)
+				//!wallAt(x1-blockWidth, y1-blockHeight, blockWidth*3, blockHeight*3)
 			) walls.push( { x: x1, y: y1, width: width1, height: height1 } );
 			else i--;
 		}
@@ -237,7 +308,6 @@
 	{
 		c.x = -1;
 		c.y = -1;
-		//while(!isValidMove(c.x, c.y, c.width, c.height) || characterAt(c.x, c.y, c.id))
 		while(!isValidMove(c.x, c.y, c.width, c.height))
 		{
 			c.x = getRandomInt(0, blocksWide-1)*blockWidth;
@@ -264,6 +334,7 @@
 	
 	function showScore()
 	{
+		var player = characters[0];
 		document.getElementById("scoreBoard").innerHTML =
 		"Level: " + level + "<br>" +
 		"Score: " + score + "<br>" +
@@ -272,6 +343,12 @@
 		"Lives: " + lives + "<br>" +
 		"PlayerSpeed: " + playerSpeed + "<br>" +
 		"GhostSpeed: " + characterSpeed + "<br>" +
+		"Player x: " + player.x + "<br>" +
+		"Player y: " + player.y + "<br>" +
+		"can.width: " + can.width + "<br>" +
+		"can.height: " + can.height + "<br>" +
+		"blockWidth: " + blockWidth + "<br>" +
+		"blockHeight: " + blockHeight + "<br>" +
 		"";
 	}
 
@@ -279,7 +356,7 @@
 	{
 		ctx.fillStyle = "white";
 		ctx.fillRect(0, 0, can.width, can.height); // clear canvas
-		drawDots();
+		if(dots != null) drawDots();
 		drawWalls();
 		for(var i = characters.length-1; i >= 0; i--) drawCharacter(characters[i]);
 		showScore();
@@ -302,8 +379,8 @@
 	{
 		paused = false;
 		if(audioContext == null) audioContext = new AudioContext();
-		playerInterval = setInterval(playerMove, playerSpeed);
-		characterInterval = setInterval(characterMove, characterSpeed);
+		playerInterval = setInterval(movePlayer, playerSpeed/speedDivisor);
+		characterInterval = setInterval(moveCharacter, characterSpeed/speedDivisor);
 		mouthInterval = setInterval(openCloseMouth, 150);
 		reDrawAll();
     }
@@ -320,15 +397,33 @@
 		invinsible = 15;
 		if(lives <= 0) resetGame();
 	}
-
+	
+	function levelUp()
+	{
+		score += scoreForLevelUp;
+		characterSpeed -= 5;
+		if(characterSpeed < playerSpeed) characterSpeed = playerSpeed;
+		level++;
+		resetLevel();
+	}
+	
+	function getDots(x, y)
+	{
+		var dotMatches = [];
+		for(var i=0; i < dots.length; i++) if(collisionTest(x, y, blockWidth, blockHeight, dots[i].x, dots[i].y, dots[i].width, dots[i].height)) dotMatches.push(dots[i]);
+		return dotMatches;
+	}
+	
 	function eatDot(x, y)
 	{
-		var dot = getDot(x, y);
-		if(dot && !dot.eaten)
+		var dotMatches = getDots(x, y);
+		for(var i = 0; i < dotMatches.length; i++)
 		{
+			var dot = dotMatches[i];
+			if(dot.eaten) continue;
 			if(dot.special)
 			{
-				superp = 30;
+				superp = 30 * speedDivisor;
 				score += scoreForEatingSpecialDots;
 				//beep({freq:1000, duration: 10, delay: 500, times: 20}); // invinsible beep
 			}
@@ -339,31 +434,17 @@
 			if(dotsEaten == dots.length) levelUp();
 		}
 	}
-	
-	function levelUp()
-	{
-		score += scoreForLevelUp;
-		characterSpeed -= 5;
-		if(characterSpeed < playerSpeed) characterSpeed = playerSpeed;
-		dotsEaten = 0;
-		level++;
-		resetLevel();
-	}
-	
-	function getDot(x, y)
-	{
-		for(var i=0; i < dots.length; i++) if(dots[i].x == x && dots[i].y == y) return dots[i];
-	}
-	
+
 	function drawDot(x, y)
 	{
-		var dot = getDot(x, y);
-		if(dot && !dot.eaten)
+		var dotMatches = getDots(x, y);
+		for(var i = 0; i < dotMatches.length; i++)
 		{
+			var dot = dotMatches[i];
 			var size = blockWidth/6;
-			ctx.fillStyle = "orange";
-			if(dot.eaten) ctx.fillStyle = "black";
-			if(dot.special) ctx.fillStyle = "green";
+			ctx.fillStyle = orange;
+			if(dot.eaten) ctx.fillStyle = lightYellow;
+			if(!dot.eaten && dot.special) ctx.fillStyle = "green";
 			if(dot.special) size = blockWidth/4;
 			ctx.beginPath();
 			ctx.arc(dot.x+blockWidth/2, dot.y+blockHeight/2, size, 0.2 * Math.PI, 2 * Math.PI, false); 
@@ -380,7 +461,7 @@
 			{
 				if(isValidMove(x*blockWidth, y*blockHeight, blockWidth, blockHeight))
 				{
-					dots.push({ x: x*blockWidth, y: y*blockHeight });
+					dots.push({ x: x*blockWidth, y: y*blockHeight, width: blockWidth, height: blockHeight });
 				}
 			}
 		}
@@ -414,23 +495,22 @@
 	{
 		if(c.width == undefined) c.width = blockWidth*.8;
 		if(c.height == undefined) c.height = blockWidth*.8;
-
 		ctx.fillStyle = bgColor;
 		ctx.fillRect(c.oldX, c.oldY, blockWidth, blockHeight); // erase previous location
 		if(c.oldX != null) drawDot(c.oldX, c.oldY)
 		ctx.fillStyle = bgColor;
 		ctx.fillRect(c.x, c.y, blockWidth, blockHeight); // erase current location
-		
 		ctx.fillStyle = c.color;
 		if(c.dead > 0) ctx.fillStyle = deadColor;
-		
-		var num1 = 1.6; // 1.6
+		var num1 = 2;//1.6; // 1.6
 		var num2 = 3; // 
 
 		if(c.id == 0)
 		{
-			if(invinsible) ctx.fillStyle = "orange";
-			if(superp) ctx.fillStyle = "red";
+			ctx.strokeStyle = grey;
+			ctx.strokeRect(c.x+2, c.y+2, c.width-4, c.height-4);
+			if(invinsible) ctx.fillStyle = orange;
+			if(superp) ctx.fillStyle = red;
 			ctx.beginPath();
 			var mouthOpenValue = 30;
 			// left, right, up, down (180, 0, 270?, 90?)
@@ -456,26 +536,30 @@
 		c.oldY = c.y;
     }
 	
-    function playerMove()
+    function movePlayer()
 	{
 		if(invinsible > 0) invinsible--;
 		if(superp > 0) superp--;
 		var player = characters[0];
 		var newX = player.x, newY = player.y, newDirection = player.direction;
 		
-		if(newDirection === 0) newX = player.x - blockWidth;
-		if(newDirection === 1) newX = player.x + blockWidth;
-		if(newDirection === 2) newY = player.y - blockHeight;
-		if(newDirection === 3) newY = player.y + blockHeight;
+		if(newDirection === 0) newX = player.x - blockWidth/speedDivisor;
+		if(newDirection === 1) newX = player.x + blockWidth/speedDivisor;
+		if(newDirection === 2) newY = player.y - blockWidth/speedDivisor;
+		if(newDirection === 3) newY = player.y + blockWidth/speedDivisor;
 
-		if(isValidMove(newX, newY, player.width, player.height))
+		if(isValidMove(newX, newY, blockWidth, blockHeight))
 		{
 			player.x = newX;
 			player.y = newY;
-			eatDot(player.x, player.y);
-			var c = characterAt(player.x, player.y);
-			if(c != null && !superp && !invinsible) playerDies();
-			if(c != null && superp) eatCharacter(c);
+			if(!invinsible) eatDot(player.x, player.y);
+			
+			var c = characterAt(player.x, player.y, blockWidth, blockWidth, player.id);
+			if(c != null && !c.dead)
+			{
+				if(superp) eatCharacter(c);
+				if(!superp && !invinsible) playerDies();
+			}
 		}
     }
 	
@@ -485,7 +569,7 @@
 		enemiesEaten++;
 		score += scoreForEatingCharacter;
 		//setRandomPosition(c);
-		c.dead = 30;
+		c.dead = 30 * speedDivisor;
 	}
 	
     function processKeys(e)
@@ -495,13 +579,13 @@
 		if(ignoreKeysUntil > 0 && ignoreKeysUntil > new Date().getTime()) return;
 		ignoreKeysUntil = 0;
 
-		var c = characters[0];
-		var newX = c.x, newX2 = c.x, newY = c.y, newY2 = c.y, newDirection = c.direction;
-		if(e.key === "ArrowLeft" || e.key === "a") { newDirection = 0; newX -= blockWidth; newX2 -= blockWidth*2; }
-		if(e.key === "ArrowRight" || e.key === "d") { newDirection = 1; newX += blockWidth; newX2 += blockWidth*2; }
-		if(e.key === "ArrowUp" || e.key === "w") { newDirection = 2; newY -= blockHeight; newY2 -= blockWidth*2; }
-		if(e.key === "ArrowDown" || e.key === "s") { newDirection = 3; newY += blockHeight; newY2 += blockWidth*2; }
-		if(isValidMove(newX, newY, c.width, c.height)) c.direction = newDirection;
+		var player = characters[0];
+		var newX = player.x, newY = player.y, newDirection = player.direction;
+		if(e.key === "ArrowLeft" || e.key === "a") { newDirection = 0; newX -= blockWidth/speedDivisor; }
+		if(e.key === "ArrowRight" || e.key === "d") { newDirection = 1; newX += blockWidth/speedDivisor; }
+		if(e.key === "ArrowUp" || e.key === "w") { newDirection = 2; newY -= blockWidth/speedDivisor; }
+		if(e.key === "ArrowDown" || e.key === "s") { newDirection = 3; newY += blockWidth/speedDivisor; }
+		if(isValidMove(newX, newY, blockWidth, blockWidth)) player.direction = newDirection;
 
 		if(e.key === "p") { if(!paused) pause(); else unPause(); }
 		else if(paused) unPause(); // anykey unpauses
@@ -509,7 +593,7 @@
 		if(e.key === "l") levelUp();
     }
 	
-    function characterMove()
+    function moveCharacter()
 	{
 		var player = characters[0];
 		for(var characterNum = 1; characterNum < characters.length; characterNum++)
@@ -525,11 +609,11 @@
 			{
 				var newX = c.x;
 				var newY = c.y;
-				if(i === scramble[0]) newX = c.x - blockWidth;
-				if(i === scramble[1]) newX = c.x + blockWidth;
-				if(i === scramble[2]) newY = c.y - blockHeight;
-				if(i === scramble[3]) newY = c.y + blockHeight;
-				if(!isValidMove(newX, newY, c.width, c.height)) continue;
+				if(i === scramble[0]) { newX = c.x - blockWidth/speedDivisor; }
+				if(i === scramble[1]) { newX = c.x + blockWidth/speedDivisor; }
+				if(i === scramble[2]) { newY = c.y - blockWidth/speedDivisor; }
+				if(i === scramble[3]) { newY = c.y + blockWidth/speedDivisor; }
+				if(!isValidMove(newX, newY, blockWidth, blockHeight)) continue;
 				
 				if(c.dest == undefined) c.dest = getRandomInt(0, destinations.length-1);
 				var destX = destinations[c.dest].x;
@@ -543,8 +627,12 @@
 			if(bestX == c.x && bestY == c.y) c.dest = getRandomInt(0, destinations.length-1); // stuck, change destination
 			c.x = bestX;
 			c.y = bestY;
-			//if(isPlayerAt(c.x, c.y) && !superp && !invinsible) playerDies();
-			//if(isPlayerAt(c.x, c.y) && superp) setRandomPosition(c);
+			var c2 = characterAt(c.x, c.y, blockWidth, blockWidth);
+			if(c2 != null && !c.dead && c2.id == 0)
+			{
+				if(superp) eatCharacter(c);
+				if(!superp && !invinsible) playerDies();
+			}
 		}
     }
 	
@@ -555,22 +643,22 @@
 		return distance;
 	}
 	
-	function isValidMove(newX, newY, width, height)
+	function isValidMove(x, y, width, height)
 	{
-		if(newX < 0) return false;
-		if(newX + width > can.width) return false;
-		if(newY < 0) return false;
-		if(newY + height > can.height) return false;
-		return !isWallAt(newX, newY, width, height);
+		if(x < 0) return false;
+		if(x + blockWidth > can.width) return false;
+		if(y < 0) return false;
+		if(y + blockHeight > can.height) return false;
+		return !wallAt(x, y, width, height);
 	}
 	
-	function isWallAt(newX, newY, width, height)
+	function wallAt(x, y, width, height)
 	{
 		for(var i = 0; i < walls.length; i++)
 		{
-			if(collisionTest(newX, newY, width, height, walls[i].x, walls[i].y, walls[i].width, walls[i].height)) return true;
+			if(collisionTest(x, y, width, height, walls[i].x, walls[i].y, walls[i].width, walls[i].height)) return walls[i];
 		}
-		return false;
+		return null;
 	}
 	
 	function collisionTest(x1, y1, width1, height1, x2, y2, width2, height2)
@@ -582,18 +670,19 @@
 		y1 < y2 + height2) return true;
 		return false;
 	}
-	
-	function characterAt(x, y, notCharacterId)
+
+	function characterAt(x, y, width, height, notId)
 	{
-		for(var i = 1; i < characters.length; i++)
+		var i = 0;
+		if(notId == 0) i = 1;
+		for(; i < characters.length; i++)
 		{
-			if(characters[i].id != notCharacterId && x == characters[i].x && y == characters[i].y) return characters[i];
+			var c = characters[i];
+			if(!c.dead && collisionTest(x, y, width, height, c.x, c.y, c.width, c.height)) return c;
 		}
 		return null;
 	}
-	
-	function isPlayerAt(x, y) { return characters[0].x == x && characters[0].y == y; }
-	
+		
 	function getRandomInt(min, max)
 	{	
 		if(min > max) { var temp = min; min = max; max = temp; }
