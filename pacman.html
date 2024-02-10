@@ -135,10 +135,10 @@
     function init()
 	{
         can = document.getElementById('can1');
-		//can.width = document.documentElement.clientWidth-10;
-		//can.height = document.documentElement.clientHeight-10;
-		can.width = 700;
-		can.height = 700;
+		can.width = document.documentElement.clientWidth-10;
+		can.height = document.documentElement.clientHeight-10;
+		//can.width = 700;//700;
+		//can.height = 700;//350;
 		if(can.width > can.height) can.width = can.height;
 		if(can.width < can.height) can.height = can.width;
 		can.style.backgroundColor = bgColor;
@@ -343,8 +343,11 @@
 		"Lives: " + lives + "<br>" +
 		"PlayerSpeed: " + playerSpeed + "<br>" +
 		"GhostSpeed: " + characterSpeed + "<br>" +
+		"<br>" +
 		"Player x: " + player.x + "<br>" +
 		"Player y: " + player.y + "<br>" +
+		"Player width: " + player.width + "<br>" +
+		"Player height: " + player.height + "<br>" +
 		"can.width: " + can.width + "<br>" +
 		"can.height: " + can.height + "<br>" +
 		"blockWidth: " + blockWidth + "<br>" +
@@ -494,7 +497,7 @@
     function drawCharacter(c)
 	{
 		if(c.width == undefined) c.width = blockWidth*.8;
-		if(c.height == undefined) c.height = blockWidth*.8;
+		if(c.height == undefined) c.height = blockHeight*.8;
 		ctx.fillStyle = bgColor;
 		ctx.fillRect(c.oldX, c.oldY, blockWidth, blockHeight); // erase previous location
 		if(c.oldX != null) drawDot(c.oldX, c.oldY)
@@ -548,7 +551,7 @@
 		if(newDirection === 2) newY = player.y - blockWidth/speedDivisor;
 		if(newDirection === 3) newY = player.y + blockWidth/speedDivisor;
 
-		if(isValidMove(newX, newY, blockWidth, blockHeight))
+		if(isValidMove(newX, newY, blockWidth, blockHeight, player))
 		{
 			player.x = newX;
 			player.y = newY;
@@ -585,7 +588,7 @@
 		if(e.key === "ArrowRight" || e.key === "d") { newDirection = 1; newX += blockWidth/speedDivisor; }
 		if(e.key === "ArrowUp" || e.key === "w") { newDirection = 2; newY -= blockWidth/speedDivisor; }
 		if(e.key === "ArrowDown" || e.key === "s") { newDirection = 3; newY += blockWidth/speedDivisor; }
-		if(isValidMove(newX, newY, blockWidth, blockWidth)) player.direction = newDirection;
+		if(isValidMove(newX, newY, blockWidth, blockWidth, player)) player.direction = newDirection;
 
 		if(e.key === "p") { if(!paused) pause(); else unPause(); }
 		else if(paused) unPause(); // anykey unpauses
@@ -643,12 +646,13 @@
 		return distance;
 	}
 	
-	function isValidMove(x, y, width, height)
+	function isValidMove(x, y, width, height, c)
 	{
 		if(x < 0) return false;
 		if(x + blockWidth > can.width) return false;
 		if(y < 0) return false;
 		if(y + blockHeight > can.height) return false;
+		//if(c != null && c.id == 0) return true; // allow main character to walk through walls
 		return !wallAt(x, y, width, height);
 	}
 	
