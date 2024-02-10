@@ -226,7 +226,7 @@
 		if(a.times && !paused) setTimeout(function() {beep(a)}, a.delay);
 	}
 
-	function resetGame()
+	function resetGame(noWait)
 	{
 		//beep({freq:120, duration: 400});
 		//beep({freq:120, duration: 400});
@@ -237,10 +237,10 @@
 		level = 1;
 		playerSpeed = 300;
 		characterSpeed = 400;
-		resetLevel();
+		resetLevel(noWait);
 	}
 	
-	function resetLevel()
+	function resetLevel(noWait)
 	{
 		halt();
 		makeWalls();
@@ -255,15 +255,16 @@
 		enemiesEaten = 0;
 		resetDots();
 		reDrawAll();
-		showMessage("Press any key to start!");
+		if(!noWait) showMessage("Press any key to start!");
 	}
 	
-	function showMessage(msg)
+	function showMessage(msg, msg2)
 	{
 		var width = 400;
 		var height = 85;
 		var x = can.width/2 - width/2;
 		var y = can.height/2 - height/2 -100;
+		if(msg2 == null) msg2 = "Press P to pause, R to reset game";
 		ctx.fillStyle = "black";
 		ctx.fillRect(x, y, width, height);
 		ctx.fillStyle = "white";
@@ -274,7 +275,7 @@
 		ctx.fillStyle = "black";
 		ctx.fillText(msg, x+30, y+55);
 		ctx.font = "20px Arial";
-		ctx.fillText("Press P to pause, R to reset game", x+30, y+75);
+		ctx.fillText(msg2, x+30, y+75);
 	}
 		
 	function makeWalls()
@@ -400,7 +401,13 @@
 		score = 0;
 		lives--;
 		invinsible = 15;
-		if(lives <= 0) resetGame();
+		if(lives <= 0)
+		{
+			halt();
+			reDrawAll();
+			resetGame(true);
+			showMessage("YOU DIED!", "");
+		}
 	}
 	
 	function levelUp()
