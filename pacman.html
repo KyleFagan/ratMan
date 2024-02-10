@@ -87,10 +87,10 @@
 	{
 		var c = characters[0];
 		var newX = c.x, newY = c.y, newDirection = c.direction;
-		if(x2 < x1-40) { newDirection = 0; newX -= blockWidth; } // left
-		if(x2 > x1+40) { newDirection = 1; newX += blockWidth; } // right
-		if(y2 < y1-40) { newDirection = 2; newY -= blockHeight; } // up
-		if(y2 > y1+40) { newDirection = 3; newY += blockHeight; } // down
+		if(x2 < x1-40) { newDirection = 0; newX -= blockWidth / speedDivisor; } // left
+		if(x2 > x1+40) { newDirection = 1; newX += blockWidth / speedDivisor; } // right
+		if(y2 < y1-40) { newDirection = 2; newY -= blockHeight / speedDivisor; } // up
+		if(y2 > y1+40) { newDirection = 3; newY += blockHeight / speedDivisor; } // down
 		if(isValidMove(newX, newY, blockWidth, blockHeight)) c.direction = newDirection;
 
 		if(paused && (Math.abs(y2-y1) > 40 || Math.abs(x2-x1) > 40)) unPause();
@@ -137,10 +137,12 @@
         can = document.getElementById('can1');
 		can.width = document.documentElement.clientWidth-10;
 		can.height = document.documentElement.clientHeight-10;
-		//can.width = 700;//700;
-		//can.height = 700;//350;
+		//can.width = 700;
+		//can.height = 700;
 		if(can.width > can.height) can.width = can.height;
 		if(can.width < can.height) can.height = can.width;
+		while(can.width % 100 !== 0) can.width--;
+		can.height = can.width;
 		can.style.backgroundColor = bgColor;
         ctx = can.getContext("2d");
 		//ctx.globalAlpha = 0.9;
@@ -546,10 +548,15 @@
 		var player = characters[0];
 		var newX = player.x, newY = player.y, newDirection = player.direction;
 		
-		if(newDirection === 0) newX = player.x - blockWidth/speedDivisor;
-		if(newDirection === 1) newX = player.x + blockWidth/speedDivisor;
-		if(newDirection === 2) newY = player.y - blockWidth/speedDivisor;
-		if(newDirection === 3) newY = player.y + blockWidth/speedDivisor;
+		if(newDirection === 0) newX = Math.floor(player.x - blockWidth/speedDivisor);
+		if(newDirection === 1) newX = Math.floor(player.x + blockWidth/speedDivisor);
+		if(newDirection === 2) newY = Math.floor(player.y - blockWidth/speedDivisor);
+		if(newDirection === 3) newY = Math.floor(player.y + blockWidth/speedDivisor);
+
+		if(newX < 0) newX = 0;
+		if(newY < 0) newY = 0;
+		if(newX + blockWidth > can.width) newX = can.width - blockWidth;
+		if(newY + blockHeight > can.height) newY = can.width - blockHeight;
 
 		if(isValidMove(newX, newY, blockWidth, blockHeight, player))
 		{
@@ -584,10 +591,10 @@
 
 		var player = characters[0];
 		var newX = player.x, newY = player.y, newDirection = player.direction;
-		if(e.key === "ArrowLeft" || e.key === "a") { newDirection = 0; newX -= blockWidth/speedDivisor; }
-		if(e.key === "ArrowRight" || e.key === "d") { newDirection = 1; newX += blockWidth/speedDivisor; }
-		if(e.key === "ArrowUp" || e.key === "w") { newDirection = 2; newY -= blockWidth/speedDivisor; }
-		if(e.key === "ArrowDown" || e.key === "s") { newDirection = 3; newY += blockWidth/speedDivisor; }
+		if(e.key === "ArrowLeft" || e.key === "a") { newDirection = 0; newX -= Math.floor(blockWidth/speedDivisor); }
+		if(e.key === "ArrowRight" || e.key === "d") { newDirection = 1; newX += Math.floor(blockWidth/speedDivisor); }
+		if(e.key === "ArrowUp" || e.key === "w") { newDirection = 2; newY -= Math.floor(blockWidth/speedDivisor); }
+		if(e.key === "ArrowDown" || e.key === "s") { newDirection = 3; newY += Math.floor(blockWidth/speedDivisor); }
 		if(isValidMove(newX, newY, blockWidth, blockWidth, player)) player.direction = newDirection;
 
 		if(e.key === "p") { if(!paused) pause(); else unPause(); }
@@ -612,10 +619,10 @@
 			{
 				var newX = c.x;
 				var newY = c.y;
-				if(i === scramble[0]) { newX = c.x - blockWidth/speedDivisor; }
-				if(i === scramble[1]) { newX = c.x + blockWidth/speedDivisor; }
-				if(i === scramble[2]) { newY = c.y - blockWidth/speedDivisor; }
-				if(i === scramble[3]) { newY = c.y + blockWidth/speedDivisor; }
+				if(i === scramble[0]) { newX = Math.floor(c.x - blockWidth/speedDivisor); }
+				if(i === scramble[1]) { newX = Math.floor(c.x + blockWidth/speedDivisor); }
+				if(i === scramble[2]) { newY = Math.floor(c.y - blockWidth/speedDivisor); }
+				if(i === scramble[3]) { newY = Math.floor(c.y + blockWidth/speedDivisor); }
 				if(!isValidMove(newX, newY, blockWidth, blockHeight)) continue;
 				
 				if(c.dest == undefined) c.dest = getRandomInt(0, destinations.length-1);
