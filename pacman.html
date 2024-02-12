@@ -34,9 +34,12 @@
 	var grey = "rgba(128, 128, 128, 0.8)";
 	var black = "rgba(0, 0, 0, 0.8)";
 	var white = "rgba(255, 255, 255,0.8)";
-	
+
+	var commonSize = 10;
 	var animationFrame = 0;
-	var speedDivisor = 5;
+
+	var blocksWide = 100;
+	var blocksHigh = 100;
 
 	var left = 0;
 	var right = 1;
@@ -47,10 +50,9 @@
 	var bgColor = "white";
 	var wallColor = "brown";
 	var deadColor = "black";
-	var blocksWide = 10;
-	var blocksHigh = 10;
 	var blockWidth, blockHeight;
-	var numberOfWalls = blocksWide-2;
+	var blockSize;
+	var numberOfWalls = 6;
 	var maxTriesToPlaceWalls = numberOfWalls * 100;
 	var wallMinLength = 3;
 	var walls = [], characters = [], dots = [], destinations = [];
@@ -58,7 +60,7 @@
 
 	var score = 0;
 	var lives = 3;
-	var specialDots = blocksWide/2;
+	var specialDots = blocksWide/commonSize/2;
 	var scoreForEatingDots = 1;
 	var scoreForEatingSpecialDots = 5;
 	var scoreForEatingCharacter = 20;
@@ -67,8 +69,8 @@
 	var dotsEaten = 0;
 	var enemiesEaten = 0;
 	var level = 1;
-	var playerSpeed = 300;
-	var characterSpeed = 400;
+	var playerSpeed;
+	var characterSpeed;
 
 	var invinsible = 0;
 	var superp = 0;
@@ -82,15 +84,16 @@
 	var touchstartY = 0;
 	var touchstartX = 0;
 	
+	// -----------------------------------------------------------------------
 
 	function handleSwipe(x1, y1, x2, y2)
 	{
 		var c = characters[0];
 		var newX = c.x, newY = c.y, newDirection = c.direction;
-		if(x2 < x1-40) { newDirection = 0; newX -= blockWidth / speedDivisor; } // left
-		if(x2 > x1+40) { newDirection = 1; newX += blockWidth / speedDivisor; } // right
-		if(y2 < y1-40) { newDirection = 2; newY -= blockHeight / speedDivisor; } // up
-		if(y2 > y1+40) { newDirection = 3; newY += blockHeight / speedDivisor; } // down
+		if(x2 < x1-40) { newDirection = 0; newX -= 1; } // left
+		if(x2 > x1+40) { newDirection = 1; newX += 1; } // right
+		if(y2 < y1-40) { newDirection = 2; newY -= 1; } // up
+		if(y2 > y1+40) { newDirection = 3; newY += 1; } // down
 		if(isValidMove(newX, newY, blockWidth, blockHeight)) c.direction = newDirection;
 
 		if(paused && (Math.abs(y2-y1) > 40 || Math.abs(x2-x1) > 40)) unPause();
@@ -100,72 +103,71 @@
 	
 	function testBlocks()
 	{
-		for(var x = 0; x < blocksWide; x++)
+		var testSize = 10;
+		for(var x = 0; x < blocksWide; x += testSize)
 		{
-			for(var y = 0; y < blocksWide; y++)
+			for(var y = 0; y < blocksHigh; y += testSize)
 			{
-				ctx.fillStyle = "yellow";
-				if(characterAt(x*blockWidth+5, y*blockHeight+5, blockWidth-10, blockHeight-10))
+				ctx.strokeStyle = "yellow";
+				ctx.strokeRect(x*blockSize, y*blockSize, blockSize*testSize, blockSize*testSize);
+				
+				if(characterAt(x, y, 10, 10))
 				{
-					ctx.fillStyle = "red";
-					ctx.fillRect(x*blockWidth+blockWidth/2, y*blockHeight+blockWidth/2, 20, 20);
+					ctx.strokeStyle = "red";
+					ctx.strokeRect(x*blockSize+5, y*blockSize+5, blockSize*testSize-10, blockSize*testSize-10);
 				}
-				if(wallAt(x*blockWidth+5, y*blockHeight+5, blockWidth-10, blockHeight-10))
+				
+				if(wallAt(x, y, 10, 10))
 				{
-					ctx.fillStyle = "green";
-					ctx.fillRect(x*blockWidth+blockWidth/2+20, y*blockHeight+blockWidth/2+20, 20, 20);
+					ctx.strokeStyle = "green";
+					ctx.strokeRect(x*blockSize+10, y*blockSize+10, blockSize*testSize-20, blockSize*testSize-20	);
 				}
 			}
 		}
 	}
 	
-	function makeCharacters()
+	function setSizes(w, h)
 	{
-		for(var i = 0; i < characters.length; i++)
+		w -= 10;
+		h -= 10;
+		w = 700;
+		h = 700;
+		blockSize = h / blocksHigh;
+		can.width = h;
+		can.height = h;
+		if(h > w)
 		{
-			var c = characters[i];
-			setRandomPosition(c);
-			c.width = blockWidth;
-			c.height = blockHeight;
-			while(wallAt(c.x, c.y, c.width, c.height)) setRandomPosition(c);
-			drawCharacter(c);
+			blockSize = w / blocksWide;
+			can.width = w;
+			can.height = w;
 		}
 	}
 	
     function init()
 	{
         can = document.getElementById('can1');
-		can.width = document.documentElement.clientWidth-10;
-		can.height = document.documentElement.clientHeight-10;
-		//can.width = 700;
-		//can.height = 700;
-		if(can.width > can.height) can.width = can.height;
-		if(can.width < can.height) can.height = can.width;
-		while(can.width % 100 !== 0) can.width--;
-		can.height = can.width;
+		setSizes(document.documentElement.clientWidth, document.documentElement.clientHeight);
 		can.style.backgroundColor = bgColor;
         ctx = can.getContext("2d");
-		//ctx.globalAlpha = 0.9;
 		
-		blockWidth = Math.floor(can.width / blocksWide);
-		blockHeight = Math.floor(can.height / blocksHigh);
-		
+		blockWidth = 10;
+		blockHeight = 10;
 		characters = [ { id: 0, color: yellow }, { id: 1, color: blue }, { id: 2, color: purple }, { id: 3, color: cyan }, { id: 4, color: pink } ];
-		destinations = [ { x: 0, y: 0 }, { x: blocksWide*blockWidth, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide*blockWidth, y: blocksHigh*blockHeight } ]
+		destinations = [ { x: 0, y: 0 }, { x: blocksWide, y: 0 }, { x: 0, y: blocksHigh*blockHeight }, { x: blocksWide, y: blocksHigh*blockHeight } ]
 
-		makeCharacters();
-
-		var testing = false;
-		if(testing)
-		{
-			//walls.push( { x: blockWidth*1, y: blockHeight*1, width: blockWidth*3+10, height: blockHeight } );
-			makeWalls();
-			drawWalls();
-			testBlocks();
-		}
-		
+		//makeCharacters();
+		//makeWalls();
+		//drawWalls();
+		//makeDots();
+		//drawDots();
+		//showScore();
+		//testBlocks();
 		resetGame();
-
+		handleEvents();
+	}
+	
+	function handleEvents()
+	{
 		can.addEventListener("touchstart",  function(event) {event.preventDefault()}, {passive: false})
 		can.addEventListener("touchmove",   function(event) {event.preventDefault()}, {passive: false})
 		can.addEventListener("touchend",    function(event) {event.preventDefault()}, {passive: false})
@@ -192,10 +194,9 @@
 			touchstartY = event.changedTouches[0].screenY;
 		}, {passive: false});
 
-		document.addEventListener('touchmove', function(event) { event.preventDefault(); }, {passive: false});
+		document.addEventListener('touchmove',   function(event) { event.preventDefault(); }, {passive: false});
 		document.addEventListener('touchcancel', function(event) { event.preventDefault(); }, {passive: false});
-
-		document.addEventListener('touchend', function(event)
+		document.addEventListener('touchend',    function(event)
 		{
 			event.preventDefault();
 			handleSwipe(touchstartX, touchstartY, event.changedTouches[0].screenX, event.changedTouches[0].screenY);
@@ -226,7 +227,7 @@
 		if(a.times && !paused) setTimeout(function() {beep(a)}, a.delay);
 	}
 
-	function resetGame(noWait)
+	function resetGame(noWaitScreen)
 	{
 		//beep({freq:120, duration: 400});
 		//beep({freq:120, duration: 400});
@@ -235,27 +236,28 @@
 		score = 0;
 		lives = 3;
 		level = 1;
-		playerSpeed = 300;
-		characterSpeed = 400;
-		resetLevel(noWait);
+		playerSpeed = 35;
+		characterSpeed = 50;
+		resetLevel(noWaitScreen);
 	}
 	
-	function resetLevel(noWait)
+	function resetLevel(noWaitScreen)
 	{
 		halt();
 		makeWalls();
+		makeDots();
+		makeCharacters();
 		for(var i = 0; i < characters.length; i++)
 		{
 			characters[i].dead = 0;
 			setRandomPosition(characters[i]);
 		}
-		invinsible = 2 * speedDivisor;
+		invinsible = 20;
 		superp = 0;
 		dotsEaten = 0;
 		enemiesEaten = 0;
-		resetDots();
 		reDrawAll();
-		if(!noWait) showMessage("Press any key to start!");
+		if(!noWaitScreen) showMessage("Press any key to start!");
 	}
 	
 	function showMessage(msg, msg2)
@@ -278,43 +280,14 @@
 		ctx.fillText(msg2, x+30, y+75);
 	}
 		
-	function makeWalls()
-	{
-		walls = [];
-		var triesLeft = maxTriesToPlaceWalls;
-		for(var i = 0; i < numberOfWalls && triesLeft > 0; i++)
-		{
-			triesLeft--;
-			var direction = getRandomInt(0, 1);
-			var x1 = getRandomInt(1, blocksWide-2) * blockWidth;
-			var y1 = getRandomInt(1, blocksHigh-2) * blockHeight;
-			var width1 = getRandomInt(wallMinLength, blocksWide-3-(x1/blockWidth)) * blockWidth;
-			var height1 = getRandomInt(wallMinLength, blocksHigh-3-(y1/blockHeight)) * blockHeight;
-			
-			if(direction == 0) height1 = blockHeight;
-			if(direction == 1) width1 = blockWidth;
-			if(direction == 0 && wallMinLength * blockWidth > width1) { i--; continue; }
-			if(direction == 1 && wallMinLength * blockHeight > height1) { i--; continue; }
-			
-			if(
-				!wallAt(x1-blockWidth, y1-blockHeight, width1, height1) &&
-				!wallAt(x1+blockWidth, y1+blockHeight, width1, height1) &&
-				!wallAt(x1, y1, blockWidth, blockHeight)
-				//!wallAt(x1-blockWidth, y1-blockHeight, blockWidth*3, blockHeight*3)
-			) walls.push( { x: x1, y: y1, width: width1, height: height1 } );
-			else i--;
-		}
-		if(triesLeft == 0) console.log("ran out of wall space");
-	}
-	
 	function setRandomPosition(c)
 	{
 		c.x = -1;
 		c.y = -1;
 		while(!isValidMove(c.x, c.y, c.width, c.height))
 		{
-			c.x = getRandomInt(0, blocksWide-1)*blockWidth;
-			c.y = getRandomInt(0, blocksHigh-1)*blockHeight;
+			c.x = getRandomInt(0, blocksWide/commonSize-1) * commonSize;
+			c.y = getRandomInt(0, blocksHigh/commonSize-1) * commonSize;
 		}
 	}
 	
@@ -338,32 +311,37 @@
 	function showScore()
 	{
 		var player = characters[0];
-		document.getElementById("scoreBoard").innerHTML =
+		var str = "";
+		str +=
 		"Level: " + level + "<br>" +
 		"Score: " + score + "<br>" +
 		"Dots eaten: " + dotsEaten + " of " + dots.length + "<br>" +
 		"Ghost eaten: " + enemiesEaten + "<br>" +
 		"Lives: " + lives + "<br>" +
-		"PlayerSpeed: " + playerSpeed + "<br>" +
-		"GhostSpeed: " + characterSpeed + "<br>" +
+		"Speed &nbsp;player: " + playerSpeed + " ghost: " + characterSpeed + "<br>" +
+		"<br>";
+		
+		/*
+		for(var i = 0; i < walls.length; i++) str += "walls[" + i + "] x: " + walls[i].x + " y: " + walls[i].y + " width: " + walls[i].width + " height: " + walls[i].height + "<br>";
+		//str += "<br>";
+		//for(var i = 0; i < dots.length; i++) str += "dots[" + i + "] x: " + dots[i].x + " y: " + dots[i].y + " width: " + dots[i].width + " height: " + dots[i].height + "<br>";
+		
+		str +=
 		"<br>" +
-		"Player x: " + player.x + "<br>" +
-		"Player y: " + player.y + "<br>" +
-		"Player width: " + player.width + "<br>" +
-		"Player height: " + player.height + "<br>" +
-		"can.width: " + can.width + "<br>" +
-		"can.height: " + can.height + "<br>" +
-		"blockWidth: " + blockWidth + "<br>" +
-		"blockHeight: " + blockHeight + "<br>" +
+		"can &nbsp; width: " + can.width + " height: " + can.height + "<br>" +
+		"player &nbsp; x: " + player.x + " y: " + player.y + " width: " + player.width + " height: " + player.height + " dir: " + player.direction + "<br>" +
+		"block &nbsp; width: " + blockWidth + " height: " + blockHeight + " size: " + blockSize + "<br>" +
 		"";
+		*/
+		document.getElementById("scoreBoard").innerHTML = str;
 	}
 
 	function reDrawAll()
 	{
 		ctx.fillStyle = "white";
 		ctx.fillRect(0, 0, can.width, can.height); // clear canvas
-		if(dots != null) drawDots();
 		drawWalls();
+		drawDots();
 		for(var i = characters.length-1; i >= 0; i--) drawCharacter(characters[i]);
 		showScore();
 	}
@@ -385,8 +363,8 @@
 	{
 		paused = false;
 		if(audioContext == null) audioContext = new AudioContext();
-		playerInterval = setInterval(movePlayer, playerSpeed/speedDivisor);
-		characterInterval = setInterval(moveCharacter, characterSpeed/speedDivisor);
+		playerInterval = setInterval(movePlayer, playerSpeed);
+		characterInterval = setInterval(moveCharacter, characterSpeed);
 		mouthInterval = setInterval(openCloseMouth, 150);
 		reDrawAll();
     }
@@ -419,61 +397,18 @@
 		resetLevel();
 	}
 	
-	function getDots(x, y)
-	{
-		var dotMatches = [];
-		for(var i=0; i < dots.length; i++) if(collisionTest(x, y, blockWidth, blockHeight, dots[i].x, dots[i].y, dots[i].width, dots[i].height)) dotMatches.push(dots[i]);
-		return dotMatches;
-	}
-	
-	function eatDot(x, y)
-	{
-		var dotMatches = getDots(x, y);
-		for(var i = 0; i < dotMatches.length; i++)
-		{
-			var dot = dotMatches[i];
-			if(dot.eaten) continue;
-			if(dot.special)
-			{
-				superp = 30 * speedDivisor;
-				score += scoreForEatingSpecialDots;
-				//beep({freq:1000, duration: 10, delay: 500, times: 20}); // invinsible beep
-			}
-			else score += scoreForEatingDots;
-			dotsEaten++;
-			dot.eaten = true;
-			showScore();
-			if(dotsEaten == dots.length) levelUp();
-		}
-	}
+	// -----------------------------------------------------------------------
 
-	function drawDot(x, y)
-	{
-		var dotMatches = getDots(x, y);
-		for(var i = 0; i < dotMatches.length; i++)
-		{
-			var dot = dotMatches[i];
-			var size = blockWidth/6;
-			ctx.fillStyle = orange;
-			if(dot.eaten) ctx.fillStyle = lightYellow;
-			if(!dot.eaten && dot.special) ctx.fillStyle = "green";
-			if(dot.special) size = blockWidth/4;
-			ctx.beginPath();
-			ctx.arc(dot.x+blockWidth/2, dot.y+blockHeight/2, size, 0.2 * Math.PI, 2 * Math.PI, false); 
-			ctx.fill();
-		}
-	}
-	
-	function resetDots()
+	function makeDots()
 	{
 		dots = [];
-		for(var x = 0; x < blocksWide; x++)
+		for(var x = 0; x < blocksWide; x += 10)
 		{
-			for(var y = 0; y < blocksHigh; y++)
+			for(var y = 0; y < blocksHigh; y += 10)
 			{
-				if(isValidMove(x*blockWidth, y*blockHeight, blockWidth, blockHeight))
+				if(!wallAt(x, y, commonSize, commonSize))
 				{
-					dots.push({ x: x*blockWidth, y: y*blockHeight, width: blockWidth, height: blockHeight });
+					dots.push({ x: x, y: y, width: commonSize, height: commonSize });
 				}
 			}
 		}
@@ -493,25 +428,165 @@
 		}
 	}
 	
+	function drawDot(x, y)
+	{
+		var dotMatches = getDots(x, y);
+		for(var i = 0; i < dotMatches.length; i++)
+		{
+			var dot = dotMatches[i];
+			ctx.fillStyle = orange;
+			if(dot.eaten) ctx.fillStyle = lightYellow;
+			if(!dot.eaten && dot.special) ctx.fillStyle = "green";
+			ctx.beginPath();
+
+			var arcX = dot.x * blockSize + blockWidth * blockSize / 2;
+			var arcY = dot.y * blockSize + blockWidth * blockSize / 2;
+			var arcSize = blockWidth*blockSize/6;
+			if(dot.special) arcSize = blockWidth*blockSize/4;
+
+			ctx.arc(arcX, arcY, arcSize, 0.2 * Math.PI, 2 * Math.PI, false); 
+			ctx.fill();
+		}
+	}
+	
+	function getDots(x, y)
+	{
+		var dotMatches = [];
+		for(var i=0; i < dots.length; i++) if(collisionTest(x, y, blockWidth, blockHeight, dots[i].x, dots[i].y, dots[i].width, dots[i].height)) dotMatches.push(dots[i]);
+		return dotMatches;
+	}
+	
+	function eatDot(x, y)
+	{
+		var dotMatches = getDots(x, y);
+		for(var i = 0; i < dotMatches.length; i++)
+		{
+			var dot = dotMatches[i];
+			if(dot.eaten) continue;
+			if(dot.special)
+			{
+				superp = 300;
+				score += scoreForEatingSpecialDots;
+				//beep({freq:1000, duration: 10, delay: 500, times: 20}); // invinsible beep
+			}
+			else score += scoreForEatingDots;
+			dotsEaten++;
+			dot.eaten = true;
+			showScore();
+			if(dotsEaten == dots.length) levelUp();
+		}
+	}
+
+	// -----------------------------------------------------------------------
+
+	function makeWalls()
+	{
+		var wallSpacing = 10;
+		walls = [];
+		var triesLeft = maxTriesToPlaceWalls;
+		for(var i = 0; i < numberOfWalls && triesLeft > 0; i++)
+		{
+			triesLeft--;
+			var direction = getRandomInt(0, 1);
+			var x1 = getRandomInt(1, (blocksWide/wallSpacing)-2) * wallSpacing;
+			var y1 = getRandomInt(1, (blocksHigh/wallSpacing)-2) * wallSpacing;
+			var width1 = getRandomInt(wallMinLength, (blocksWide/wallSpacing)-3) * wallSpacing;
+			var height1 = getRandomInt(wallMinLength, (blocksHigh/wallSpacing)-3) * wallSpacing;
+			
+			if(direction == 0) height1 = commonSize;
+			if(direction == 1) width1 = commonSize;
+			//if(direction == 0 && wallMinLength * blockWidth > width1) { i--; continue; }
+			//if(direction == 1 && wallMinLength * blockHeight > height1) { i--; continue; }
+			
+			if(
+				!wallAt(x1-blockWidth, y1-blockHeight, width1, height1) &&
+				!wallAt(x1+blockWidth, y1+blockHeight, width1, height1) &&
+				!wallAt(x1, y1, blockWidth, blockHeight)
+				//!wallAt(x1-blockWidth, y1-blockHeight, blockWidth*3, blockHeight*3)
+			) walls.push( { x: x1, y: y1, width: width1, height: height1 } );
+			else i--;
+		}
+		if(triesLeft == 0) console.log("ran out of wall space");
+	}
+	
     function drawWalls()
 	{
 		for(var i = 0; i < walls.length; i++)
 		{
 			if(walls[i].color == undefined) walls[i].color = wallColor;
 			ctx.fillStyle = walls[i].color;
-			ctx.fillRect(walls[i].x, walls[i].y, walls[i].width, walls[i].height);
+			ctx.fillRect(walls[i].x*blockSize, walls[i].y*blockSize, walls[i].width*blockSize, walls[i].height*blockSize);
+		}
+    }
+	
+	// -----------------------------------------------------------------------
+
+	function makeCharacters()
+	{
+		for(var i = 0; i < characters.length; i++)
+		{
+			var c = characters[i];
+			c.width = commonSize;
+			c.height = commonSize;
+			setRandomPosition(c);
+			while(wallAt(c.x, c.y, c.width, c.height)) setRandomPosition(c);
+			var watchDogCount = 0;
+			while(watchDogCount < 20 && characterAt(c.x, c.y, c.width, c.height, c.id)) { setRandomPosition(c); watchDogCount++; }
+			if(watchDogCount >= 20) alert("stuck in makeCharacters " + watchDogCount);
+			drawCharacter(c);
+		}
+	}
+	
+    function moveCharacter()
+	{
+		var player = characters[0];
+		for(var characterNum = 1; characterNum < characters.length; characterNum++)
+		{
+			var c = characters[characterNum];
+			if(c.dead > 0) { c.dead--; continue; }
+			var playerDistance = getDistance(player.x, c.x, player.y, c.y);
+			var bestX = c.x;
+			var bestY = c.y;
+			var scramble = [ 0, 1, 2, 3 ];
+			scramble.sort(() => Math.random() - 0.5);
+			for(var i = 0; i < 4; i++)
+			{
+				var newX = c.x;
+				var newY = c.y;
+				if(i === scramble[0]) { newX = c.x - 1; }
+				if(i === scramble[1]) { newX = c.x + 1; }
+				if(i === scramble[2]) { newY = c.y - 1; }
+				if(i === scramble[3]) { newY = c.y + 1; }
+				if(!isValidMove(newX, newY, blockWidth, blockHeight)) continue;
+				
+				if(c.dest == undefined) c.dest = getRandomInt(0, destinations.length-1);
+				var destX = destinations[c.dest].x;
+				var destY = destinations[c.dest].y; 
+				if(!invinsible && !superp && playerDistance < 200) { destX = player.x; destY = player.y; }
+
+				var bestDistance = getDistance(destX, bestX, destY, bestY);
+				var newDistance = getDistance(destX, newX, destY, newY);
+				if(newDistance < bestDistance) { bestX = newX; bestY = newY; }
+			}
+			if(bestX == c.x && bestY == c.y) c.dest = getRandomInt(0, destinations.length-1); // stuck, change destination
+			c.x = bestX;
+			c.y = bestY;
+			var c2 = characterAt(c.x, c.y, blockWidth, blockWidth, c.id);
+			if(c2 != null && !c.dead && c2.id == 0)
+			{
+				if(superp) eatCharacter(c);
+				if(!superp && !invinsible) playerDies();
+			}
 		}
     }
 	
     function drawCharacter(c)
 	{
-		if(c.width == undefined) c.width = blockWidth*.8;
-		if(c.height == undefined) c.height = blockHeight*.8;
 		ctx.fillStyle = bgColor;
-		ctx.fillRect(c.oldX, c.oldY, blockWidth, blockHeight); // erase previous location
+		ctx.fillRect(c.oldX*blockSize, c.oldY*blockSize, c.width*blockSize, c.height*blockSize); // erase previous location
 		if(c.oldX != null) drawDot(c.oldX, c.oldY)
 		ctx.fillStyle = bgColor;
-		ctx.fillRect(c.x, c.y, blockWidth, blockHeight); // erase current location
+		ctx.fillRect(c.x*blockSize, c.y*blockSize, c.width*blockSize, c.height*blockSize); // erase current location
 		ctx.fillStyle = c.color;
 		if(c.dead > 0) ctx.fillStyle = deadColor;
 		var num1 = 2;//1.6; // 1.6
@@ -519,19 +594,22 @@
 
 		if(c.id == 0)
 		{
-			ctx.strokeStyle = grey;
-			ctx.strokeRect(c.x+2, c.y+2, c.width-4, c.height-4);
+			//ctx.strokeStyle = grey;
+			//ctx.strokeRect(c.x*blockSize, c.y*blockSize, c.width*blockSize-4, c.height*blockSize-4);
 			if(invinsible) ctx.fillStyle = orange;
 			if(superp) ctx.fillStyle = red;
 			ctx.beginPath();
 			var mouthOpenValue = 30;
 			// left, right, up, down (180, 0, 270?, 90?)
 			if(c.mouthClosed) mouthOpenValue = 1;
-			if (c.direction == 0) ctx.arc(c.x+c.width/num1, c.y+c.width/num1, c.width/num2, (Math.PI / 180) * (179 - mouthOpenValue), (Math.PI / 180) * (180 + mouthOpenValue), true);
-			else if (c.direction == 1) ctx.arc(c.x+c.width/num1, c.y+c.width/num1, c.width/num2, (Math.PI / 180) * mouthOpenValue, (Math.PI / 180) * (360 - mouthOpenValue));
-			else if (c.direction == 2) ctx.arc(c.x+c.width/num1, c.y+c.width/num1, c.width/num2, (Math.PI / 180) * (269 - mouthOpenValue), (Math.PI / 180) * (270 + mouthOpenValue), true);
-			else ctx.arc(c.x+c.width/num1, c.y+c.width/num1, c.width/num2, (Math.PI / 180) * (89 + mouthOpenValue), (Math.PI / 180) * (90 - mouthOpenValue));
-			ctx.lineTo(c.x + c.width/num1, c.y + c.width/num1); // mouth
+			var n1 = (c.x * blockSize) + (c.width * blockSize / 2);
+			var n2 = (c.y * blockSize) + (c.height * blockSize / 2);
+			var n3 = (c.width * blockSize) / num2;
+			if (c.direction == 0) ctx.arc(n1, n2, n3, (Math.PI / 180) * (179 - mouthOpenValue), (Math.PI / 180) * (180 + mouthOpenValue), true);
+			else if (c.direction == 1) ctx.arc(n1, n2, n3, (Math.PI / 180) * mouthOpenValue, (Math.PI / 180) * (360 - mouthOpenValue));
+			else if (c.direction == 2) ctx.arc(n1, n2, n3, (Math.PI / 180) * (269 - mouthOpenValue), (Math.PI / 180) * (270 + mouthOpenValue), true);
+			else ctx.arc(n1, n2, n3, (Math.PI / 180) * (89 + mouthOpenValue), (Math.PI / 180) * (90 - mouthOpenValue));
+			ctx.lineTo(n1, n2); // mouth
 			ctx.closePath();
 			ctx.fill();
 			ctx.stroke();
@@ -539,7 +617,10 @@
 		else
 		{
 			ctx.beginPath();
-			ctx.arc(c.x+c.width/num1, c.y+c.width/num1, c.width/num2, 0, 2 * Math.PI, false); // body
+			var arcX = (c.x * blockSize) + (c.width * blockSize / 2);
+			var arcY = (c.y * blockSize) + (c.height * blockSize / 2);
+			var arcSize = (c.width * blockSize) / num2;
+			ctx.arc(arcX, arcY, arcSize, 0, 2 * Math.PI, false); // body
 			ctx.closePath();
 			ctx.fill();
 			ctx.stroke();
@@ -555,17 +636,17 @@
 		var player = characters[0];
 		var newX = player.x, newY = player.y, newDirection = player.direction;
 		
-		if(newDirection === 0) newX = Math.floor(player.x - blockWidth/speedDivisor);
-		if(newDirection === 1) newX = Math.floor(player.x + blockWidth/speedDivisor);
-		if(newDirection === 2) newY = Math.floor(player.y - blockWidth/speedDivisor);
-		if(newDirection === 3) newY = Math.floor(player.y + blockWidth/speedDivisor);
+		if(newDirection === 0) newX = player.x - 1;
+		if(newDirection === 1) newX = player.x + 1;
+		if(newDirection === 2) newY = player.y - 1;
+		if(newDirection === 3) newY = player.y + 1;
 
 		if(newX < 0) newX = 0;
 		if(newY < 0) newY = 0;
 		if(newX + blockWidth > can.width) newX = can.width - blockWidth;
 		if(newY + blockHeight > can.height) newY = can.width - blockHeight;
 
-		if(isValidMove(newX, newY, blockWidth, blockHeight, player))
+		if(isValidMove(newX, newY, blockWidth, blockHeight))
 		{
 			player.x = newX;
 			player.y = newY;
@@ -586,9 +667,11 @@
 		enemiesEaten++;
 		score += scoreForEatingCharacter;
 		//setRandomPosition(c);
-		c.dead = 30 * speedDivisor;
+		c.dead = 30;
 	}
 	
+	// -----------------------------------------------------------------------
+
     function processKeys(e)
 	{
 		if(e.ctrlKey) return; // ignore all ctrl keys
@@ -598,59 +681,17 @@
 
 		var player = characters[0];
 		var newX = player.x, newY = player.y, newDirection = player.direction;
-		if(e.key === "ArrowLeft" || e.key === "a") { newDirection = 0; newX -= Math.floor(blockWidth/speedDivisor); }
-		if(e.key === "ArrowRight" || e.key === "d") { newDirection = 1; newX += Math.floor(blockWidth/speedDivisor); }
-		if(e.key === "ArrowUp" || e.key === "w") { newDirection = 2; newY -= Math.floor(blockWidth/speedDivisor); }
-		if(e.key === "ArrowDown" || e.key === "s") { newDirection = 3; newY += Math.floor(blockWidth/speedDivisor); }
-		if(isValidMove(newX, newY, blockWidth, blockWidth, player)) player.direction = newDirection;
-
+		if(e.key === "ArrowLeft" || e.key === "a") { newDirection = 0; newX -= 1; }
+		if(e.key === "ArrowRight" || e.key === "d") { newDirection = 1; newX += 1; }
+		if(e.key === "ArrowUp" || e.key === "w") { newDirection = 2; newY -= 1; }
+		if(e.key === "ArrowDown" || e.key === "s") { newDirection = 3; newY += 1; }
+		if(isValidMove(newX, newY, blockWidth, blockWidth)) player.direction = newDirection;
+		player.direction = newDirection;
+		
 		if(e.key === "p") { if(!paused) pause(); else unPause(); }
 		else if(paused) unPause(); // anykey unpauses
 		if(e.key === "r") resetGame();
 		if(e.key === "l") levelUp();
-    }
-	
-    function moveCharacter()
-	{
-		var player = characters[0];
-		for(var characterNum = 1; characterNum < characters.length; characterNum++)
-		{
-			var c = characters[characterNum];
-			if(c.dead > 0) { c.dead--; continue; }
-			var playerDistance = getDistance(player.x, c.x, player.y, c.y);
-			var bestX = c.x;
-			var bestY = c.y;
-			var scramble = [ 0, 1, 2, 3 ];
-			scramble.sort(() => Math.random() - 0.5);
-			for(var i = 0; i < 4; i++)
-			{
-				var newX = c.x;
-				var newY = c.y;
-				if(i === scramble[0]) { newX = Math.floor(c.x - blockWidth/speedDivisor); }
-				if(i === scramble[1]) { newX = Math.floor(c.x + blockWidth/speedDivisor); }
-				if(i === scramble[2]) { newY = Math.floor(c.y - blockWidth/speedDivisor); }
-				if(i === scramble[3]) { newY = Math.floor(c.y + blockWidth/speedDivisor); }
-				if(!isValidMove(newX, newY, blockWidth, blockHeight)) continue;
-				
-				if(c.dest == undefined) c.dest = getRandomInt(0, destinations.length-1);
-				var destX = destinations[c.dest].x;
-				var destY = destinations[c.dest].y; 
-				if(!invinsible && !superp && playerDistance < 200) { destX = player.x; destY = player.y; }
-
-				var bestDistance = getDistance(destX, bestX, destY, bestY);
-				var newDistance = getDistance(destX, newX, destY, newY);
-				if(newDistance < bestDistance) { bestX = newX; bestY = newY; }
-			}
-			if(bestX == c.x && bestY == c.y) c.dest = getRandomInt(0, destinations.length-1); // stuck, change destination
-			c.x = bestX;
-			c.y = bestY;
-			var c2 = characterAt(c.x, c.y, blockWidth, blockWidth);
-			if(c2 != null && !c.dead && c2.id == 0)
-			{
-				if(superp) eatCharacter(c);
-				if(!superp && !invinsible) playerDies();
-			}
-		}
     }
 	
 	function getDistance(x1, x2, y1, y2)
@@ -660,13 +701,13 @@
 		return distance;
 	}
 	
-	function isValidMove(x, y, width, height, c)
+	function isValidMove(x, y, width, height) // checks if within board
 	{
 		if(x < 0) return false;
-		if(x + blockWidth > can.width) return false;
+		if(x + commonSize > blocksWide) return false;
 		if(y < 0) return false;
-		if(y + blockHeight > can.height) return false;
-		//if(c != null && c.id == 0) return true; // allow main character to walk through walls
+		if(y + commonSize > blocksHigh) return false;
+		
 		return !wallAt(x, y, width, height);
 	}
 	
@@ -691,12 +732,10 @@
 
 	function characterAt(x, y, width, height, notId)
 	{
-		var i = 0;
-		if(notId == 0) i = 1;
-		for(; i < characters.length; i++)
+		for(var i = 0; i < characters.length; i++)
 		{
 			var c = characters[i];
-			if(!c.dead && collisionTest(x, y, width, height, c.x, c.y, c.width, c.height)) return c;
+			if(c.id != notId && !c.dead && collisionTest(x, y, width, height, c.x, c.y, c.width, c.height)) return c;
 		}
 		return null;
 	}
