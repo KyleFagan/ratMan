@@ -130,9 +130,12 @@
 	{
 		w -= 10;
 		h -= 10;
-		blockSize = h / blocksHigh;
-		can.width = h;
-		can.height = h;
+		if(w >= h)
+		{
+			blockSize = h / blocksHigh;
+			can.width = h;
+			can.height = h;
+		}
 		if(h > w)
 		{
 			blockSize = w / blocksWide;
