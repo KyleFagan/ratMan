@@ -3,7 +3,7 @@
 	<head>
 		<meta name="viewport" content="width=device-width, user-scalable=no">
         <style>
-			body { overscroll-behavior: none; }
+			body { overscroll-behavior: none; overflow: hidden; }
 		</style>
 	</head>
 	
@@ -37,8 +37,8 @@
 	var animationFrame = 0;
 
 	var blocksWide = 100;
-	var blocksHigh = 100;
-	var blockSize = 10; // 10x10
+	var blocksHigh = 200;
+	var blockSize = 20; // 10x10
 
 	var left = 0;
 	var right = 1;
@@ -54,7 +54,7 @@
 	var maxTriesToPlaceWalls = numberOfWalls * 100;
 	var wallMinLength = 3;
 	var walls = [], characters = [], dots = [], destinations = [];
-	var audioContext = new AudioContext();
+	//var audioContext = new AudioContext();
 
 	var score = 0;
 	var lives = 3;
@@ -109,13 +109,13 @@
 				ctx.strokeStyle = "yellow";
 				ctx.strokeRect(x*pixelsPerBlock, y*pixelsPerBlock, pixelsPerBlock*testSize, pixelsPerBlock*testSize);
 				
-				if(characterAt(x, y, 10, 10))
+				if(getCharactersAt(x, y, 10, 10).length > 0)
 				{
 					ctx.strokeStyle = "red";
 					ctx.strokeRect(x*pixelsPerBlock+5, y*pixelsPerBlock+5, pixelsPerBlock*testSize-10, pixelsPerBlock*testSize-10);
 				}
 				
-				if(wallAt(x, y, 10, 10))
+				if(getWallsAt(x, y, 10, 10).length > 0)
 				{
 					ctx.strokeStyle = "green";
 					ctx.strokeRect(x*pixelsPerBlock+10, y*pixelsPerBlock+10, pixelsPerBlock*testSize-20, pixelsPerBlock*testSize-20	);
@@ -124,34 +124,33 @@
 		}
 	}
 	
-	function setSizes(w, h)
+	function setSizes()
 	{
-		w -= 10;
-		h -= 10;
-		if(w >= h)
-		{
-			pixelsPerBlock = h / blocksHigh;
-			can.width = h;
-			can.height = h;
-		}
-		if(h > w)
-		{
-			pixelsPerBlock = w/2 / blocksWide;
-			can.width = w/2;
-			can.height = w/2;
-		}
+		let newBlocksWide = document.getElementById("newBlocksWide");
+		let newBlocksHigh = document.getElementById("newBlocksHigh");
+		let newBlockSize = document.getElementById("newBlockSize");
+		if(newBlocksWide != null) blocksWide = newBlocksWide.value;
+		if(newBlocksHigh != null) blocksHigh = newBlocksHigh.value;
+		if(newBlockSize != null) blockSize = newBlockSize.value;
+		let w = document.documentElement.clientWidth - 20;
+		let h = document.documentElement.clientHeight - 20;
+		w -= 20;
+		h -= 20;
+		if(h / blocksHigh < w / blocksWide) pixelsPerBlock = h / blocksHigh;
+		else pixelsPerBlock = w / blocksWide;
+		can.width = pixelsPerBlock * blocksWide;
+		can.height = pixelsPerBlock * blocksHigh;
 	}
 	
     function init()
 	{
         can = document.getElementById('can1');
-		setSizes(document.documentElement.clientWidth, document.documentElement.clientHeight);
+		setSizes();
 		can.style.backgroundColor = bgColor;
         ctx = can.getContext("2d");
 		
 		characters = [ { id: 0, color: yellow }, { id: 1, color: blue }, { id: 2, color: purple }, { id: 3, color: cyan }, { id: 4, color: pink } ];
 		destinations = [ { x: 0, y: 0 }, { x: blocksWide, y: 0 }, { x: 0, y: blocksHigh*blockSize }, { x: blocksWide, y: blocksHigh*blockSize } ]
-
 		//makeCharacters();
 		//makeWalls();
 		//drawWalls();
@@ -178,7 +177,7 @@
 		
 		document.addEventListener('mouseup', function(event)
 		{
-			event.preventDefault();
+			//event.preventDefault();
 			handleSwipe(mousestartX, mousestartY, event.pageX, event.pageY);
 			mousestartX = 0;
 			mousestartY = 0;
@@ -323,10 +322,15 @@
 		"player &nbsp; x: " + player.x + " y: " + player.y + " width: " + player.width + " height: " + player.height + " dir: " + player.direction + "<br>" +
 		"block &nbsp; width: " + blockSize + " height: " + blockSize + " size: " + pixelsPerBlock + "<br>" +
 		"<br>";
-
+		
+		/*
 		for(var i = 0; i < walls.length && i < 10; i++) str += "walls[" + i + "] x: " + walls[i].x + " y: " + walls[i].y + " width: " + walls[i].width + " height: " + walls[i].height + "<br>";
 		str += "<br>";
 		for(var i = 0; i < dots.length && i < 10; i++) str += "dots[" + i + "] x: " + dots[i].x + " y: " + dots[i].y + " width: " + dots[i].width + " height: " + dots[i].height + "<br>";
+		*/
+		str += "blocksWide: <input id=blocksWide size=1 value='" + blocksWide + "' onchange='setSizes()'> ";
+		str += "blocksHigh: <input id=blocksHigh size=1 value='" + blocksHigh + "' onchange='setSizes()'> ";
+		str += "blockSize: <input id=blockSize size=1 value='" + blockSize + "' onchange='setSizes()'> ";
 		document.getElementById("scoreBoard").innerHTML = str;
 	}
 
@@ -356,7 +360,7 @@
 	function unPause()
 	{
 		paused = false;
-		if(audioContext == null) audioContext = new AudioContext();
+		//if(audioContext == null) audioContext = new AudioContext();
 		playerInterval = setInterval(movePlayer, playerSpeed);
 		characterInterval = setInterval(moveCharacter, characterSpeed);
 		mouthInterval = setInterval(openCloseMouth, 150);
@@ -367,7 +371,7 @@
 
 	function playerDies()
 	{
-		if(audioContext == null) audioContext = new AudioContext();
+		//if(audioContext == null) audioContext = new AudioContext();
 		//beep({freq:120, duration: 400});
 		//beep({freq:1000, duration: 10, delay: 1500, times: 20}); // invinsible beep
 		score = 0;
@@ -396,11 +400,11 @@
 	function makeDots()
 	{
 		dots = [];
-		for(var x = 0; x < blocksWide; x += 10)
+		for(var x = 0; x < blocksWide; x += blockSize)
 		{
-			for(var y = 0; y < blocksHigh; y += 10)
+			for(var y = 0; y < blocksHigh; y += blockSize)
 			{
-				if(!wallAt(x, y, blockSize, blockSize))
+				if(getWallsAt(x, y, blockSize, blockSize).length == 0)
 				{
 					dots.push({ x: x, y: y, width: blockSize, height: blockSize });
 				}
@@ -428,8 +432,12 @@
 		for(var i = 0; i < dotMatches.length; i++)
 		{
 			var dot = dotMatches[i];
-			var arcX = dot.x * pixelsPerBlock + blockSize * pixelsPerBlock / 2;
-			var arcY = dot.y * pixelsPerBlock + blockSize * pixelsPerBlock / 2;
+
+			ctx.fillStyle = bgColor;
+			ctx.fillRect(dot.x * pixelsPerBlock, dot.y * pixelsPerBlock, dot.width*pixelsPerBlock, dot.height*pixelsPerBlock); // erase current location
+
+			var arcX = dot.x * pixelsPerBlock + blockSize * pixelsPerBlock / 2; // middle x of block
+			var arcY = dot.y * pixelsPerBlock + blockSize * pixelsPerBlock / 2; // middle y of block
 			var arcSize = blockSize * pixelsPerBlock / 6;
 			ctx.fillStyle = orange;
 			if(dot.eaten) ctx.fillStyle = lightYellow;
@@ -446,9 +454,13 @@
 	
 	function getDots(x, y, w, h)
 	{
-		var dotMatches = [];
-		for(var i=0; i < dots.length; i++) if(collisionTest(x, y, w, h, dots[i].x, dots[i].y, dots[i].width, dots[i].height)) dotMatches.push(dots[i]);
-		return dotMatches;
+		var matches = [];
+		for(var i=0; i < dots.length; i++)
+		{
+			var dot = dots[i];
+			if(collisionTest(x, y, w, h, dot.x, dot.y, dot.width, dot.height)) matches.push(dot);
+		}
+		return matches;
 	}
 	
 	function eatDot(x, y, w, h)
@@ -493,9 +505,9 @@
 			if(direction == 1 && y1 + height1 > blocksHigh-1) { i--; continue; }
 			
 			if(
-				!wallAt(x1-blockSize, y1-blockSize, width1, height1) &&
-				!wallAt(x1+blockSize, y1+blockSize, width1, height1) &&
-				!wallAt(x1, y1, blockSize, blockSize)
+				getWallsAt(x1-blockSize, y1-blockSize, width1, height1).length == 0 &&
+				getWallsAt(x1+blockSize, y1+blockSize, width1, height1).length == 0 &&
+				getWallsAt(x1, y1, blockSize, blockSize).length == 0
 			) walls.push( { x: x1, y: y1, width: width1, height: height1 } );
 			else i--;
 		}
@@ -522,9 +534,9 @@
 			c.width = blockSize-4;
 			c.height = blockSize-4;
 			setRandomPosition(c);
-			while(wallAt(c.x, c.y, c.width, c.height)) setRandomPosition(c);
+			while(getWallsAt(c.x, c.y, c.width, c.height).length > 0) setRandomPosition(c);
 			var watchDogCount = 0;
-			while(watchDogCount < 20 && characterAt(c.x, c.y, c.width, c.height, c.id)) { setRandomPosition(c); watchDogCount++; }
+			while(watchDogCount < 20 && getCharactersAt(c.x, c.y, c.width, c.height, c.id).length > 0) { setRandomPosition(c); watchDogCount++; }
 			if(watchDogCount >= 20) alert("stuck in makeCharacters " + watchDogCount);
 			drawCharacter(c);
 		}
@@ -564,11 +576,16 @@
 			if(bestX == c.x && bestY == c.y) c.dest = getRandomInt(0, destinations.length-1); // stuck, change destination
 			c.x = bestX;
 			c.y = bestY;
-			var c2 = characterAt(c.x, c.y, blockSize, blockSize, c.id);
-			if(c2 != null && !c.dead && c2.id == 0)
+			
+			var ca = getCharactersAt(c.x, c.y, blockSize, blockSize, c.id);
+			for(var i = 0; i < ca.length; i++)
 			{
-				if(superp) eatCharacter(c);
-				if(!superp && !invinsible) playerDies();
+				var c2 = ca[i];
+				if(c2.id == player.id && !c.dead)
+				{
+					if(superp) eatCharacter(c);
+					if(!superp && !invinsible) playerDies();
+				}
 			}
 		}
     }
@@ -577,13 +594,13 @@
 	{
 		ctx.fillStyle = bgColor;
 		ctx.fillRect(c.oldX*pixelsPerBlock, c.oldY*pixelsPerBlock, c.width*pixelsPerBlock, c.height*pixelsPerBlock); // erase previous location
-		if(c.oldX != null) drawDot(c.oldX, c.oldY, blockSize, blockSize)
+		if(c.oldX != null) drawDot(c.oldX, c.oldY, blockSize, blockSize);
 		ctx.fillStyle = bgColor;
 		ctx.fillRect(c.x*pixelsPerBlock, c.y*pixelsPerBlock, c.width*pixelsPerBlock, c.height*pixelsPerBlock); // erase current location
 		ctx.fillStyle = c.color;
 		if(c.dead > 0) ctx.fillStyle = deadColor;
-		var num1 = 2;//1.6; // 1.6
-		var num2 = 3; // 
+		var num1 = 2;
+		var num2 = 3;
 
 		if(c.id == 0)
 		{
@@ -645,11 +662,12 @@
 			player.y = newY;
 			if(!invinsible) eatDot(player.x, player.y, player.width, player.height);
 			
-			var c = characterAt(player.x, player.y, blockSize, blockSize, player.id);
-			if(c != null && !c.dead)
+			var ca = getCharactersAt(player.x, player.y, blockSize, blockSize, player.id);
+			for(var i = 0; i < ca.length; i++)
 			{
-				if(superp) eatCharacter(c);
-				if(!superp && !invinsible) playerDies();
+				var c = ca[i];
+				if(!c.dead && superp) eatCharacter(c);
+				if(!c.dead && !superp && !invinsible) playerDies();
 			}
 		}
     }
@@ -682,7 +700,7 @@
 		player.direction = newDirection;
 		
 		if(e.key === "p") { if(!paused) pause(); else unPause(); }
-		else if(paused) unPause(); // anykey unpauses
+		//else if(paused) unPause(); // anykey unpauses
 		if(e.key === "r") resetGame();
 		if(e.key === "l") levelUp();
     }
@@ -700,19 +718,32 @@
 		if(x + blockSize > blocksWide) return false;
 		if(y < 0) return false;
 		if(y + blockSize > blocksHigh) return false;
-		
-		return !wallAt(x, y, width, height);
+		if(getWallsAt(x, y, width, height).length == 0) return true;
+		return false;
 	}
 	
-	function wallAt(x, y, width, height)
+	function getWallsAt(x, y, width, height)
 	{
+		var matches = [];
 		for(var i = 0; i < walls.length; i++)
 		{
-			if(collisionTest(x, y, width, height, walls[i].x, walls[i].y, walls[i].width, walls[i].height)) return walls[i];
+			var wall = walls[i];
+			if(collisionTest(x, y, width, height, walls[i].x, walls[i].y, walls[i].width, walls[i].height)) matches.push(wall);
 		}
-		return null;
+		return matches;
 	}
 	
+	function getCharactersAt(x, y, width, height, notId)
+	{
+		var matches = [];
+		for(var i = 0; i < characters.length; i++)
+		{
+			var c = characters[i];
+			if(c.id != notId && !c.dead && collisionTest(x, y, width, height, c.x, c.y, c.width, c.height)) matches.push(c);
+		}
+		return matches;
+	}
+		
 	function collisionTest(x1, y1, width1, height1, x2, y2, width2, height2)
 	{
 		if(
@@ -723,16 +754,6 @@
 		return false;
 	}
 
-	function characterAt(x, y, width, height, notId)
-	{
-		for(var i = 0; i < characters.length; i++)
-		{
-			var c = characters[i];
-			if(c.id != notId && !c.dead && collisionTest(x, y, width, height, c.x, c.y, c.width, c.height)) return c;
-		}
-		return null;
-	}
-		
 	function getRandomInt(min, max)
 	{	
 		if(min > max) { var temp = min; min = max; max = temp; }
