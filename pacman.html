@@ -37,8 +37,8 @@
 	var animationFrame = 0;
 
 	var blocksWide = 100;
-	var blocksHigh = 200;
-	var blockSize = 20; // 10x10
+	var blocksHigh = 100;
+	var blockSize = 10; // 10x10
 
 	var left = 0;
 	var right = 1;
@@ -126,16 +126,11 @@
 	
 	function setSizes()
 	{
-		let newBlocksWide = document.getElementById("newBlocksWide");
-		let newBlocksHigh = document.getElementById("newBlocksHigh");
-		let newBlockSize = document.getElementById("newBlockSize");
-		if(newBlocksWide != null) blocksWide = newBlocksWide.value;
-		if(newBlocksHigh != null) blocksHigh = newBlocksHigh.value;
-		if(newBlockSize != null) blockSize = newBlockSize.value;
-		let w = document.documentElement.clientWidth - 20;
+		let blocksAcross = document.getElementById("blocksAcross");
+		if(blocksAcross != null) blocksWide = parseInt(blocksAcross.value);
+		if(blocksAcross != null) blocksHigh = parseInt(blocksAcross.value);
+		let w = document.documentElement.clientWidth - 200;
 		let h = document.documentElement.clientHeight - 20;
-		w -= 20;
-		h -= 20;
 		if(h / blocksHigh < w / blocksWide) pixelsPerBlock = h / blocksHigh;
 		else pixelsPerBlock = w / blocksWide;
 		can.width = pixelsPerBlock * blocksWide;
@@ -151,38 +146,46 @@
 		
 		characters = [ { id: 0, color: yellow }, { id: 1, color: blue }, { id: 2, color: purple }, { id: 3, color: cyan }, { id: 4, color: pink } ];
 		destinations = [ { x: 0, y: 0 }, { x: blocksWide, y: 0 }, { x: 0, y: blocksHigh*blockSize }, { x: blocksWide, y: blocksHigh*blockSize } ]
-		//makeCharacters();
-		//makeWalls();
-		//drawWalls();
-		//makeDots();
-		//drawDots();
-		//showScore();
+		makeCharacters();
+		makeWalls();
+		drawWalls();
+		makeDots();
+		drawDots();
+		showScore();
 		//testBlocks();
 		resetGame();
 		handleEvents();
+		document.addEventListener("keydown", processKeys, false);
+
 	}
 	
 	function handleEvents()
 	{
+        can.addEventListener("keydown", processKeys, false);
+
 		can.addEventListener("touchstart",  function(event) {event.preventDefault()}, {passive: false})
 		can.addEventListener("touchmove",   function(event) {event.preventDefault()}, {passive: false})
 		can.addEventListener("touchend",    function(event) {event.preventDefault()}, {passive: false})
 		can.addEventListener("touchcancel", function(event) {event.preventDefault()}, {passive: false})
 
+		/* ---------------
 		document.addEventListener('mousedown', function(event)
 		{
+			event.preventDefault();
 			mousestartX = event.pageX;
 			mousestartY = event.pageY;
 		}, false);
 		
 		document.addEventListener('mouseup', function(event)
 		{
-			//event.preventDefault();
+			event.preventDefault();
 			handleSwipe(mousestartX, mousestartY, event.pageX, event.pageY);
 			mousestartX = 0;
 			mousestartY = 0;
 		}, false); 
-
+		
+		// ---------------
+		
 		document.addEventListener('touchstart', function(event)
 		{
 			event.preventDefault();
@@ -199,8 +202,8 @@
 			touchstartX = 0;
 			touchstartY = 0;
 		}, {passive: false}); 
-
-        document.addEventListener("keydown", processKeys, false);
+		--------------- */
+		
 	}
 	
 	function beep(a) // beep({freq:520, duration:200, vol:100, delay:200, times:1}
@@ -223,7 +226,7 @@
 		if(a.times && !paused) setTimeout(function() {beep(a)}, a.delay);
 	}
 
-	function resetGame(noWaitScreen)
+	function resetGame(msg)
 	{
 		//beep({freq:120, duration: 400});
 		//beep({freq:120, duration: 400});
@@ -234,10 +237,10 @@
 		level = 1;
 		playerSpeed = 35;
 		characterSpeed = 50;
-		resetLevel(noWaitScreen);
+		resetLevel(msg);
 	}
 	
-	function resetLevel(noWaitScreen)
+	function resetLevel(msg)
 	{
 		halt();
 		makeWalls();
@@ -253,7 +256,8 @@
 		dotsEaten = 0;
 		enemiesEaten = 0;
 		reDrawAll();
-		if(!noWaitScreen) showMessage("Press any key to start!");
+		if(msg == null) msg = "Press any key to start!";
+		showMessage(msg);
 	}
 	
 	function showMessage(msg, msg2)
@@ -307,20 +311,21 @@
 	function showScore()
 	{
 		var player = characters[0];
-		var str = "";
+		var str = "<div style='float: left; max-width: 145px'>";
 		str +=
 		"Level: " + level + "<br>" +
 		"Score: " + score + "<br>" +
 		"Dots eaten: " + dotsEaten + " of " + dots.length + "<br>" +
 		"Ghost eaten: " + enemiesEaten + "<br>" +
 		"Lives: " + lives + "<br>" +
-		"Speed &nbsp;player: " + playerSpeed + " ghost: " + characterSpeed + "<br>" +
 		"<br>";
-		
+		"Speed player: " + playerSpeed + " ghost: " + characterSpeed + "<br>" +
+		"<br>";
+
 		str +=
-		"can &nbsp; width: " + can.width + " height: " + can.height + "<br>" +
-		"player &nbsp; x: " + player.x + " y: " + player.y + " width: " + player.width + " height: " + player.height + " dir: " + player.direction + "<br>" +
-		"block &nbsp; width: " + blockSize + " height: " + blockSize + " size: " + pixelsPerBlock + "<br>" +
+		"canvas " + can.width + "x" + can.height + "<br>" +
+		"player x: " + player.x + " y: " + player.y + " w: " + player.width + " h: " + player.height + " dir: " + player.direction + "<br>" +
+		"blockSize: " + blockSize + " ppb: " + pixelsPerBlock + "<br>" +
 		"<br>";
 		
 		/*
@@ -328,9 +333,8 @@
 		str += "<br>";
 		for(var i = 0; i < dots.length && i < 10; i++) str += "dots[" + i + "] x: " + dots[i].x + " y: " + dots[i].y + " width: " + dots[i].width + " height: " + dots[i].height + "<br>";
 		*/
-		str += "blocksWide: <input id=blocksWide size=1 value='" + blocksWide + "' onchange='setSizes()'> ";
-		str += "blocksHigh: <input id=blocksHigh size=1 value='" + blocksHigh + "' onchange='setSizes()'> ";
-		str += "blockSize: <input id=blockSize size=1 value='" + blockSize + "' onchange='setSizes()'> ";
+		str += "blocks across: <input id=blocksAcross type=number min=50 max=200 step=50 onchange='init()' value='" + blocksWide + "'> ";
+		str += "</div>";
 		document.getElementById("scoreBoard").innerHTML = str;
 	}
 
@@ -381,8 +385,7 @@
 		{
 			halt();
 			reDrawAll();
-			resetGame(true);
-			showMessage("YOU DIED!", "");
+			resetGame("YOU DIED!");
 		}
 	}
 	
@@ -392,7 +395,7 @@
 		characterSpeed -= 5;
 		if(characterSpeed < playerSpeed) characterSpeed = playerSpeed;
 		level++;
-		resetLevel();
+		resetLevel("Level " + level);
 	}
 	
 	// -----------------------------------------------------------------------
@@ -400,18 +403,19 @@
 	function makeDots()
 	{
 		dots = [];
-		for(var x = 0; x < blocksWide; x += blockSize)
+		
+		for(var xx = 0; xx < blocksWide; xx += blockSize)
 		{
-			for(var y = 0; y < blocksHigh; y += blockSize)
+			for(var yy = 0; yy < blocksHigh; yy += blockSize)
 			{
-				if(getWallsAt(x, y, blockSize, blockSize).length == 0)
+				if(getWallsAt(xx, yy, blockSize, blockSize).length == 0 && xx * pixelsPerBlock + blockSize * pixelsPerBlock <= can.width &&  yy * pixelsPerBlock + blockSize * pixelsPerBlock <= can.height)
 				{
-					dots.push({ x: x, y: y, width: blockSize, height: blockSize });
+					dots.push({ x: xx, y: yy, width: blockSize, height: blockSize });
 				}
 			}
 		}
 
-		for(var i=0; i < specialDots; i++)
+		for(var i = 0; i < specialDots; i++)
 		{
 			var dot = dots[getRandomInt(0, dots.length-1)];
 			dot.special = true;
@@ -531,13 +535,13 @@
 		for(var i = 0; i < characters.length; i++)
 		{
 			var c = characters[i];
-			c.width = blockSize-4;
-			c.height = blockSize-4;
+			c.width = blockSize-2;
+			c.height = blockSize-2;
 			setRandomPosition(c);
 			while(getWallsAt(c.x, c.y, c.width, c.height).length > 0) setRandomPosition(c);
 			var watchDogCount = 0;
-			while(watchDogCount < 20 && getCharactersAt(c.x, c.y, c.width, c.height, c.id).length > 0) { setRandomPosition(c); watchDogCount++; }
-			if(watchDogCount >= 20) alert("stuck in makeCharacters " + watchDogCount);
+			while(watchDogCount < 50 && getCharactersAt(c.x, c.y, c.width, c.height, c.id).length > 0) { setRandomPosition(c); watchDogCount++; }
+			if(watchDogCount >= 50) alert("stuck in makeCharacters c.len: " + characters.length + " c.id: " + c.id);
 			drawCharacter(c);
 		}
 	}
@@ -592,19 +596,28 @@
 	
     function drawCharacter(c)
 	{
-		ctx.fillStyle = bgColor;
-		ctx.fillRect(c.oldX*pixelsPerBlock, c.oldY*pixelsPerBlock, c.width*pixelsPerBlock, c.height*pixelsPerBlock); // erase previous location
-		if(c.oldX != null) drawDot(c.oldX, c.oldY, blockSize, blockSize);
+		if(c.oldX != null)
+		{
+			ctx.fillStyle = bgColor;
+			ctx.fillRect(c.oldX*pixelsPerBlock, c.oldY*pixelsPerBlock, c.width*pixelsPerBlock, c.height*pixelsPerBlock); // erase previous location
+			drawDot(c.oldX, c.oldY, blockSize, blockSize);
+		
+			var ca = getCharactersAt(c.oldX, c.oldY, blockSize, blockSize, c.id);
+			for(var i = 0; i < ca.length; i++)
+			{
+				var c2 = ca[i];
+				if(c2.dead > 0) drawCharacter(c2);
+			}
+		}
+		
 		ctx.fillStyle = bgColor;
 		ctx.fillRect(c.x*pixelsPerBlock, c.y*pixelsPerBlock, c.width*pixelsPerBlock, c.height*pixelsPerBlock); // erase current location
 		ctx.fillStyle = c.color;
 		if(c.dead > 0) ctx.fillStyle = deadColor;
-		var num1 = 2;
-		var num2 = 3;
 
 		if(c.id == 0)
 		{
-			//ctx.strokeStyle = grey;
+			//ctx.strokeStyle = grey; // show box around player
 			//ctx.strokeRect(c.x*pixelsPerBlock, c.y*pixelsPerBlock, c.width*pixelsPerBlock-4, c.height*pixelsPerBlock-4);
 			if(invinsible) ctx.fillStyle = orange;
 			if(superp) ctx.fillStyle = red;
@@ -614,7 +627,7 @@
 			if(c.mouthClosed) mouthOpenValue = 1;
 			var n1 = (c.x * pixelsPerBlock) + (c.width * pixelsPerBlock / 2);
 			var n2 = (c.y * pixelsPerBlock) + (c.height * pixelsPerBlock / 2);
-			var n3 = (c.width * pixelsPerBlock) / num2;
+			var n3 = (c.width * pixelsPerBlock) / 3;
 			if (c.direction == 0) ctx.arc(n1, n2, n3, (Math.PI / 180) * (179 - mouthOpenValue), (Math.PI / 180) * (180 + mouthOpenValue), true);
 			else if (c.direction == 1) ctx.arc(n1, n2, n3, (Math.PI / 180) * mouthOpenValue, (Math.PI / 180) * (360 - mouthOpenValue));
 			else if (c.direction == 2) ctx.arc(n1, n2, n3, (Math.PI / 180) * (269 - mouthOpenValue), (Math.PI / 180) * (270 + mouthOpenValue), true);
@@ -629,7 +642,7 @@
 			ctx.beginPath();
 			var arcX = (c.x * pixelsPerBlock) + (c.width * pixelsPerBlock / 2);
 			var arcY = (c.y * pixelsPerBlock) + (c.height * pixelsPerBlock / 2);
-			var arcSize = (c.width * pixelsPerBlock) / num2;
+			var arcSize = (c.width * pixelsPerBlock) / 3;
 			ctx.arc(arcX, arcY, arcSize, 0, 2 * Math.PI, false); // body
 			ctx.closePath();
 			ctx.fill();
@@ -692,6 +705,7 @@
 
 		var player = characters[0];
 		var newX = player.x, newY = player.y, newDirection = player.direction;
+		var validDirectionKeys = [ "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "a", "d", "s", "d" ];
 		if(e.key === "ArrowLeft" || e.key === "a") { newDirection = 0; newX -= 1; }
 		if(e.key === "ArrowRight" || e.key === "d") { newDirection = 1; newX += 1; }
 		if(e.key === "ArrowUp" || e.key === "w") { newDirection = 2; newY -= 1; }
@@ -700,7 +714,8 @@
 		player.direction = newDirection;
 		
 		if(e.key === "p") { if(!paused) pause(); else unPause(); }
-		//else if(paused) unPause(); // anykey unpauses
+		else if(paused && validDirectionKeys.includes(e.key)) unPause(); // anykey unpauses
+		//else if(validDirectionKeys.includes(e.key)) unPause(); // anykey unpauses
 		if(e.key === "r") resetGame();
 		if(e.key === "l") levelUp();
     }
@@ -715,9 +730,10 @@
 	function isValidMove(x, y, width, height) // checks if within board
 	{
 		if(x < 0) return false;
-		if(x + blockSize > blocksWide) return false;
 		if(y < 0) return false;
-		if(y + blockSize > blocksHigh) return false;
+		if(x + width > blocksWide) return false;
+		if(y + height > blocksHigh) return false;
+
 		if(getWallsAt(x, y, width, height).length == 0) return true;
 		return false;
 	}
@@ -739,7 +755,7 @@
 		for(var i = 0; i < characters.length; i++)
 		{
 			var c = characters[i];
-			if(c.id != notId && !c.dead && collisionTest(x, y, width, height, c.x, c.y, c.width, c.height)) matches.push(c);
+			if(c.id != notId && collisionTest(x, y, width, height, c.x, c.y, c.width, c.height)) matches.push(c);
 		}
 		return matches;
 	}
