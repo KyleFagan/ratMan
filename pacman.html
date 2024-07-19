@@ -538,8 +538,8 @@
 			
 			if(direction == 0) height1 = blockSize;
 			if(direction == 1) width1 = blockSize;
-			if(direction == 0 && x1 + width1 > blocksWide) { i--; continue; }
-			if(direction == 1 && y1 + height1 > blocksHigh) { i--; continue; }
+			if(direction == 0 && (x1 + width1 > blocksWide || width1 === blocksWide)) { i--; continue; }
+			if(direction == 1 && (y1 + height1 > blocksHigh || height1 === blocksHigh)) { i--; continue; }
 			
 			if(
 				getWallsAt(x1-blockSize, y1-blockSize, width1, height1).length == 0 &&
