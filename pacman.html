@@ -20,11 +20,7 @@
 		alert('Error message: '+msg+'\nURL: '+url+'\nLine Number: '+linenumber);
 		return true;
 	}
-	
-	var myDate;
-	var rates = [];
-	var rate = 0;
-	
+		
 	var red = "rgba(255, 0, 0, 0.8)";
 	var green = "rgba(0, 255, 0, 0.8)";
 	var blue = "rgba(0, 0, 255, 0.8)";
@@ -43,11 +39,6 @@
 	var blocksWide = 100;
 	var blocksHigh = 100;
 	var blockSize = 10; // 10x10
-
-	var left = 0;
-	var right = 1;
-	var up = 2;
-	var down = 3;
 
     var can, ctx;
 	var bgColor = "white";
@@ -339,7 +330,7 @@
 		"player x: " + player.x + " y: " + player.y + " w: " + player.width + " h: " + player.height + " dir: " + player.direction + "<br>" +
 		"blockSize: " + blockSize + " ppb: " + pixelsPerBlock + "<br>" +
 		"<br>" +
-		rate + "<br>";
+		window.rate + "<br>";
 		
 		/*
 		for(var i = 0; i < walls.length && i < 10; i++) str += "walls[" + i + "] x: " + walls[i].x + " y: " + walls[i].y + " width: " + walls[i].width + " height: " + walls[i].height + "<br>";
@@ -365,15 +356,16 @@
 	{
 		if(!paused)
 		{
-			/* get frame rate 
 			var newDate = Date.now();
-			rate = Math.floor(1000 / (newDate - myDate));
-			myDate = newDate;
+			if(window.lastDate == null) window.lastDate = newDate;
+			if(window.rates == null) window.rates = [];
+			var currentFrameRate = 0;
+			var currentFrameRate = Math.floor(1000 / (newDate - window.lastDate));
+			window.lastDate = newDate;
 			
-			if(rates.length > 10) rates.shift();
-			rates.push(rate);
-			rate = Math.floor(getAverage(rates));
-			*/
+			if(window.rates.length > 10) window.rates.shift();
+			window.rates.push(currentFrameRate);
+			window.rate = Math.floor(getAverage(window.rates));
 			
 			drawDots();
 			for(var i = characters.length-1; i >= 0; i--) if(characters[i].dead > 0) drawCharacter(characters[i]); // draw dead first
@@ -526,25 +518,25 @@
 		for(var i = 0; i < numberOfWalls && triesLeft > 0; i++)
 		{
 			triesLeft--;
-			var direction = getRandomInt(0, 1);
+			var direction = getRandomInt(0, 1); // 0 = horizontal, 1 = vertical
 			var x1 = 0;
 			var y1 = 0;
-			if(direction == 1) x1 = getRandomInt(1, (blocksWide/blockSize)-2) * blockSize;
-			if(direction == 1) y1 = getRandomInt(0, (blocksWide/blockSize)-1) * blockSize;
 			if(direction == 0) x1 = getRandomInt(0, (blocksWide/blockSize)-1) * blockSize;
 			if(direction == 0) y1 = getRandomInt(1, (blocksWide/blockSize)-2) * blockSize;
+			if(direction == 1) x1 = getRandomInt(1, (blocksWide/blockSize)-2) * blockSize;
+			if(direction == 1) y1 = getRandomInt(0, (blocksWide/blockSize)-1) * blockSize;
 			var width1 = getRandomInt(wallMinLength, (blocksWide/blockSize)-3) * blockSize;
 			var height1 = getRandomInt(wallMinLength, (blocksHigh/blockSize)-3) * blockSize;
 			
 			if(direction == 0) height1 = blockSize;
 			if(direction == 1) width1 = blockSize;
-			if(direction == 0 && (x1 + width1 > blocksWide || width1 === blocksWide)) { i--; continue; }
-			if(direction == 1 && (y1 + height1 > blocksHigh || height1 === blocksHigh)) { i--; continue; }
+			if(width1 === blocksWide || height1 == blocksWide) { i--; continue; }
+			if(direction == 0 && x1 + width1 > blocksWide) { i--; continue; }
+			if(direction == 1 && y1 + height1 > blocksHigh) { i--; continue; }
 			
 			if(
 				getWallsAt(x1-blockSize, y1-blockSize, width1, height1).length == 0 &&
-				getWallsAt(x1+blockSize, y1+blockSize, width1, height1).length == 0 &&
-				getWallsAt(x1, y1, blockSize, blockSize).length == 0
+				getWallsAt(x1+blockSize, y1+blockSize, width1, height1).length == 0
 			) walls.push( { x: x1, y: y1, width: width1, height: height1 } );
 			else i--;
 		}
