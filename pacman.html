@@ -26,19 +26,6 @@
 // dot = { x: 1, y: 1, width: 1, height: 1 }
 // destinations = { x: 0, y: 0 }
 
-	var red = "rgba(255, 0, 0, 0.8)";
-	var green = "rgba(0, 255, 0, 0.8)";
-	var blue = "rgba(0, 0, 255, 0.8)";
-	var cyan = "rgba(0, 255, 255, 0.8)";
-	var orange = "rgba(255, 165,0, 0.8)";
-	var yellow = "rgba(255, 255, 204, 0.8)";
-	var lightYellow = "rgba(255, 255, 224, 0.8)";
-	var pink = "rgba(255, 192, 204, 0.8)";
-	var purple = "rgba(160, 32, 240, 0.8)";
-	var grey = "rgba(128, 128, 128, 0.8)";
-	var black = "rgba(0, 0, 0, 0.8)";
-	var white = "rgba(255, 255, 255,0.8)";
-
 	var blocksWide = 100;
 	var blocksHigh = 100;
 	var blockSize = 10; // 10x10
@@ -124,7 +111,7 @@
 		setSizes();
 		can.style.backgroundColor = bgColor;
         ctx = can.getContext("2d");
-		characters = [ { id: 0, color: yellow }, { id: 1, color: blue }, { id: 2, color: purple }, { id: 3, color: cyan }, { id: 4, color: pink } ];
+		characters = [ { id: 0, color: "yellow" }, { id: 1, color: "blue" }, { id: 2, color: "purple" }, { id: 3, color: "cyan" }, { id: 4, color: "pink" } ];
 		destinations = [ { x: 0, y: 0 }, { x: blocksWide, y: 0 }, { x: 0, y: blocksHigh*blockSize }, { x: blocksWide, y: blocksHigh*blockSize } ]
 		makeWalls();
 		drawWalls();
@@ -434,8 +421,8 @@
 			var arcX = dot.x * pixelsPerBlock + blockSize * pixelsPerBlock / 2; // middle x of block
 			var arcY = dot.y * pixelsPerBlock + blockSize * pixelsPerBlock / 2; // middle y of block
 			var arcSize = blockSize * pixelsPerBlock / 6;
-			ctx.fillStyle = orange;
-			if(dot.eaten) ctx.fillStyle = lightYellow;
+			ctx.fillStyle = "orange";
+			if(dot.eaten) ctx.fillStyle = "lightYellow";
 			if(!dot.eaten && dot.special)
 			{
 				ctx.fillStyle = "green";
@@ -601,8 +588,8 @@
 		ctx.fillStyle = c.color;
 		if(c.dead > 0) ctx.fillStyle = deadColor;
 
-		if(c.id == 0 && invinsible) ctx.fillStyle = orange;
-		if(c.id == 0 && superp) ctx.fillStyle = red;
+		if(c.id == 0 && invinsible) ctx.fillStyle = "orange";
+		if(c.id == 0 && superp) ctx.fillStyle = "red";
 		ctx.beginPath();
 		var mouthOpenValue = 30;
 		// left, right, up, down (180, 0, 270, 90)
@@ -621,7 +608,7 @@
 		
 		c.oldX = c.x;
 		c.oldY = c.y;
-		ctx.fillStyle = black;
+		ctx.fillStyle = "black";
 		
 		// draw eye
 		if (c.direction == 0) ctx.fillRect(c.x*pixelsPerBlock + (c.width * pixelsPerBlock * 8 / 20), c.y*pixelsPerBlock +  + (c.height * pixelsPerBlock * 6 / 20), 5, 5);
