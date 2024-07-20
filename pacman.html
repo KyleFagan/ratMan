@@ -20,7 +20,12 @@
 		alert('Error message: '+msg+'\nURL: '+url+'\nLine Number: '+linenumber);
 		return true;
 	}
-		
+
+// character = { id: 0, color: yellow, dead: 0, width: 1, height: 1, x: 1, y: 1, direction: 0, mouthClosed: 0 }; // superp, invinsible	
+// wall = { id: 1, x: 1, y: 1, width: 1, height: 1 }
+// dot = { x: 1, y: 1, width: 1, height: 1 }
+// destinations = { x: 0, y: 0 }
+
 	var red = "rgba(255, 0, 0, 0.8)";
 	var green = "rgba(0, 255, 0, 0.8)";
 	var blue = "rgba(0, 0, 255, 0.8)";
@@ -34,8 +39,6 @@
 	var black = "rgba(0, 0, 0, 0.8)";
 	var white = "rgba(255, 255, 255,0.8)";
 
-	var animationFrame = 0;
-
 	var blocksWide = 100;
 	var blocksHigh = 100;
 	var blockSize = 10; // 10x10
@@ -48,7 +51,7 @@
 	var numberOfWalls = blocksWide/15;
 	var maxTriesToPlaceWalls = numberOfWalls * 100;
 	var wallMinLength = 3;
-	var walls = [], characters = [], dots = [], destinations = [];
+	var characters = [], walls = [], dots = [], destinations = [];
 	//var audioContext = new AudioContext();
 
 	var score = 0;
@@ -94,31 +97,6 @@
 		if(Math.abs(y2-y1) > 200 && Math.abs(x2-x1) > 200) resetGame();
 	}
 	
-	function testBlocks()
-	{
-		var testSize = 10;
-		for(var x = 0; x < blocksWide; x += testSize)
-		{
-			for(var y = 0; y < blocksHigh; y += testSize)
-			{
-				ctx.strokeStyle = "yellow";
-				ctx.strokeRect(x*pixelsPerBlock, y*pixelsPerBlock, pixelsPerBlock*testSize, pixelsPerBlock*testSize);
-				
-				if(getCharactersAt(x, y, 10, 10).length > 0)
-				{
-					ctx.strokeStyle = "red";
-					ctx.strokeRect(x*pixelsPerBlock+5, y*pixelsPerBlock+5, pixelsPerBlock*testSize-10, pixelsPerBlock*testSize-10);
-				}
-				
-				if(getWallsAt(x, y, 10, 10).length > 0)
-				{
-					ctx.strokeStyle = "green";
-					ctx.strokeRect(x*pixelsPerBlock+10, y*pixelsPerBlock+10, pixelsPerBlock*testSize-20, pixelsPerBlock*testSize-20	);
-				}
-			}
-		}
-	}
-	
 	function setSizes()
 	{
 		let blocksAcross = document.getElementById("blocksAcross");
@@ -146,33 +124,29 @@
 		setSizes();
 		can.style.backgroundColor = bgColor;
         ctx = can.getContext("2d");
-		
 		characters = [ { id: 0, color: yellow }, { id: 1, color: blue }, { id: 2, color: purple }, { id: 3, color: cyan }, { id: 4, color: pink } ];
 		destinations = [ { x: 0, y: 0 }, { x: blocksWide, y: 0 }, { x: 0, y: blocksHigh*blockSize }, { x: blocksWide, y: blocksHigh*blockSize } ]
-		makeCharacters();
 		makeWalls();
 		drawWalls();
 		makeDots();
-		drawDots();
 		showScore();
-		//testBlocks();
+		
 		resetGame();
 		handleEvents();
 		document.addEventListener("keydown", processKeys, false);
 		animate();
-
 	}
 	
 	function handleEvents()
 	{
         can.addEventListener("keydown", processKeys, false);
-
 		can.addEventListener("touchstart",  function(event) {event.preventDefault()}, {passive: false})
 		can.addEventListener("touchmove",   function(event) {event.preventDefault()}, {passive: false})
 		can.addEventListener("touchend",    function(event) {event.preventDefault()}, {passive: false})
 		can.addEventListener("touchcancel", function(event) {event.preventDefault()}, {passive: false})
 
 		/* ---------------
+		
 		document.addEventListener('mousedown', function(event)
 		{
 			event.preventDefault();
@@ -206,6 +180,7 @@
 			touchstartX = 0;
 			touchstartY = 0;
 		}, {passive: false}); 
+		
 		--------------- */
 		
 	}
@@ -227,7 +202,7 @@
 		oscillator.start(audioContext.currentTime);
 		oscillator.stop(audioContext.currentTime + a.duration * 0.001);
 		a.times--;
-		if(a.times && !paused) setTimeout(function() {beep(a)}, a.delay);
+		if(a.times && !paused) setTimeout(function() { beep(a) }, a.delay);
 	}
 
 	function resetGame(msg)
@@ -330,13 +305,9 @@
 		"player x: " + player.x + " y: " + player.y + " w: " + player.width + " h: " + player.height + " dir: " + player.direction + "<br>" +
 		"blockSize: " + blockSize + " ppb: " + pixelsPerBlock + "<br>" +
 		"<br>" +
-		window.rate + "<br>";
+		"rate: " + window.rate + "<br>" +
+		"frameCounter: " + window.frameCounter + "<br>";
 		
-		/*
-		for(var i = 0; i < walls.length && i < 10; i++) str += "walls[" + i + "] x: " + walls[i].x + " y: " + walls[i].y + " width: " + walls[i].width + " height: " + walls[i].height + "<br>";
-		str += "<br>";
-		for(var i = 0; i < dots.length && i < 10; i++) str += "dots[" + i + "] x: " + dots[i].x + " y: " + dots[i].y + " width: " + dots[i].width + " height: " + dots[i].height + "<br>";
-		*/
 		str += "blocks across: <input id=blocksAcross type=number min=50 max=200 step=50 onchange='init()' value='" + blocksWide + "'> ";
 		str += "</div>";
 		document.getElementById("scoreBoard").innerHTML = str;
@@ -371,9 +342,9 @@
 			for(var i = characters.length-1; i >= 0; i--) if(characters[i].dead > 0) drawCharacter(characters[i]); // draw dead first
 			for(var i = characters.length-1; i >= 0; i--) if(characters[i].dead == 0) drawCharacter(characters[i]); // draw live second
 			showScore();
-			//if(invinsible > 0 && animationFrame % 10 == 0) beep({freq:1000, duration: 10}); // invinsible beep
-			//if(superp > 0 && animationFrame % 15 == 0) beep({freq:1000, duration: 10}); // invinsible beep
-			animationFrame++;
+			//if(invinsible > 0 && window.frameCounter % 10 == 0) beep({freq:1000, duration: 10}); // invinsible beep
+			//if(superp > 0 && window.frameCounter % 15 == 0) beep({freq:1000, duration: 10}); // invinsible beep
+			window.frameCounter++;
 		}
 		window.requestAnimationFrame(animate);
 	}
@@ -390,7 +361,6 @@
 	
 	function openCloseMouth()
 	{
-		//characters[0].mouthClosed = !characters[0].mouthClosed;
 		for(var i = 0; i < characters.length; i++) if(characters[i].dead == 0) characters[i].mouthClosed = !characters[i].mouthClosed;
 	}
 
@@ -537,7 +507,7 @@
 			if(
 				getWallsAt(x1-blockSize, y1-blockSize, width1, height1).length == 0 &&
 				getWallsAt(x1+blockSize, y1+blockSize, width1, height1).length == 0
-			) walls.push( { x: x1, y: y1, width: width1, height: height1 } );
+			) walls.push( { id: i+1, x: x1, y: y1, width: width1, height: height1 } );
 			else i--;
 		}
 		if(triesLeft == 0) console.log("ran out of wall space");
@@ -604,6 +574,7 @@
 				var newDistance = getDistance(destX, newX, destY, newY);
 				if(newDistance < bestDistance) { bestX = newX; bestY = newY; bestDirection = newDirection; }
 			}
+
 			if(bestX == c.x && bestY == c.y) 
 			{
 				c.dest = getRandomInt(0, destinations.length-1); // stuck, change destination
@@ -611,7 +582,6 @@
 			c.x = bestX;
 			c.y = bestY;
 			c.direction = bestDirection;
-			
 			
 			var ca = getCharactersAt(c.x, c.y, blockSize, blockSize, c.id);
 			for(var i = 0; i < ca.length; i++)
@@ -631,8 +601,6 @@
 		ctx.fillStyle = c.color;
 		if(c.dead > 0) ctx.fillStyle = deadColor;
 
-		//ctx.strokeStyle = grey; // show box around player
-		//ctx.strokeRect(c.x*pixelsPerBlock, c.y*pixelsPerBlock, c.width*pixelsPerBlock-4, c.height*pixelsPerBlock-4);
 		if(c.id == 0 && invinsible) ctx.fillStyle = orange;
 		if(c.id == 0 && superp) ctx.fillStyle = red;
 		ctx.beginPath();
@@ -727,7 +695,6 @@
 		if(e.key === "Escape") { if(!paused) pause(); else unPause(); }
 		else if(e.key === "p") { if(!paused) pause(); else unPause(); }
 		else if(paused && validDirectionKeys.includes(e.key)) unPause(); // anykey unpauses
-		//else if(validDirectionKeys.includes(e.key)) unPause(); // anykey unpauses
 		if(e.key === "r") resetGame();
 		if(e.key === "l") levelUp();
     }
@@ -750,13 +717,13 @@
 		return false;
 	}
 	
-	function getWallsAt(x, y, width, height)
+	function getWallsAt(x, y, width, height, notId)
 	{
 		var matches = [];
 		for(var i = 0; i < walls.length; i++)
 		{
-			var wall = walls[i];
-			if(collisionTest(x, y, width, height, walls[i].x, walls[i].y, walls[i].width, walls[i].height)) matches.push(wall);
+			var obj = walls[i];
+			if(obj.id != notId && collisionTest(x, y, width, height, obj.x, obj.y, obj.width, obj.height)) matches.push(obj);
 		}
 		return matches;
 	}
@@ -766,8 +733,8 @@
 		var matches = [];
 		for(var i = 0; i < characters.length; i++)
 		{
-			var c = characters[i];
-			if(c.id != notId && collisionTest(x, y, width, height, c.x, c.y, c.width, c.height)) matches.push(c);
+			var obj = characters[i];
+			if(obj.id != notId && collisionTest(x, y, width, height, obj.x, obj.y, obj.width, obj.height)) matches.push(obj);
 		}
 		return matches;
 	}
