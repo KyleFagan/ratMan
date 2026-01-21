@@ -1,0 +1,126 @@
+
+
+<div id="top"></div>
+<div id="theBoard"></div>
+<div id="bottom"></div>
+
+<style>
+	* { user-select: none; font-family: monospace, Courier, "Courier New", monospace; font-size: 4vh; }
+	.untouched { color: orange; }
+	.title { color: green; font-weight: boldest; }
+	.mine { color: red; }
+	.lost { color: red; box-shadow:inset 0px 0px 0px 1px red; }
+	#theBoard { padding: 10px 15px 10px 15px; }
+</style>
+
+<script>
+    var board = new Map();
+	var score = 0;
+    var mines = 10;
+    var maxX = 10;
+    var maxY = 10;
+	var lost = 0;
+
+    // -------------------------------------------------------------------------------------------------------------------------
+
+	function setMines()
+    {
+		board = new Map();
+        for(var minesLeft = mines; minesLeft > 0; minesLeft--)
+        {
+            var p = 0;
+            do
+            {
+                var x = Math.floor(Math.random() * (maxX-1));
+                var y = Math.floor(Math.random() * (maxY-1));
+                p = x * 100 + y;
+            }
+            while (board.get(p) == "x");
+            board.set(p, "x");
+        }
+    }
+
+    // -------------------------------------------------------------------------------------------------------------------------
+ 
+	function check(x, y, depth)
+	{
+		if(depth == undefined) depth = 0;
+		if(lost != 0) return false;
+        var p = x * 100 + y;
+        if(board.get(p) == "x") { board.set(p, "*"); lost = 1; draw(); }
+        if(board.has(p)) return false;
+		var num = 0;
+        if(board.get((x - 1) * 100 + (y - 1)) == "x") num++; // NW
+		if(board.get((x - 1) * 100 + (y)) == "x") num++;; // W
+		if(board.get((x - 1) * 100 + (y + 1)) == "x") num++;; // SW
+		if(board.get((x) * 100 + (y - 1)) == "x") num++;; // N
+		if(board.get((x) * 100 + (y + 1)) == "x") num++;; // S
+		if(board.get((x + 1) * 100 + (y - 1)) == "x") num++;; // NE
+		if(board.get((x + 1) * 100 + (y)) == "x") num++;; // E
+		if(board.get((x + 1) * 100 + (y + 1)) == "x") num++;; // SE
+        if(board.get(p) !== "x") { board.set(p, num); score++; }
+		if(num == 0 && depth < 100)
+		{
+			if(x > 0)
+			{
+				if(y > 0) check(x-1, y-1, depth+1); // NW
+				check(x-1, y, depth+1); // W
+				if(y < maxY-1) check(x-1, y+1, depth+1); // SW
+			}
+			if(y < maxY-1) check(x, y+1, depth+1); // N
+			if(y > 0) check(x, y-1, depth+1); // S
+			if(x < maxX-1)
+			{
+				if(y > 0) check(x+1, y-1, depth+1); // NE
+				check(x+1, y, depth+1); // E
+				if(y < maxY-1) check(x+1, y+1, depth+1); // SE
+			}
+		}
+		if(depth == 0) draw();
+		return false;
+	}
+
+    // -------------------------------------------------------------------------------------------------------------------------
+
+	function draw()
+    {
+		var top = "";
+		var theBoard = "";
+		var bottom = "";
+		top += "<span class='title'>Kyle's MineSweeper</span><br>";
+		top += "Click a ? to dig<br>";
+		top += "There is no flagging mines<br>";
+		
+		for(var x = 0; x < maxX; x++)
+		{
+			for(var y = 0; y < maxY; y++)
+			{
+                var p = x * 100 + y;
+				var value = board.get(p);
+				if(lost == 1 && board.get(p) == "x") theBoard += "<span class='mine'>" + value + "</span> ";
+				else if(lost == 1 && board.get(p) == "*") theBoard += "<span class='lost'>" + value + "</span> ";
+				else if(lost != 1 && board.get(p) == "x") theBoard += "<span class='untouched' onclick='return check("+x+","+y+")'>?</span> ";
+				else if(board.has(p) && board.get(p) != "x") theBoard += value + " ";
+				else if(!board.has(p)) theBoard += "<span class='untouched' onclick='return check("+x+","+y+")'>?</span> ";
+			}
+			theBoard += "<br>\n";
+		}
+		var maxScore = maxX * maxY - mines;
+		if(score == maxScore) lost = 2;
+		bottom += "Score: " + score + "/" + maxScore + "<br>";
+		if(lost == 0) bottom += "Mines: " + mines + "<br>";
+		if(lost == 1) bottom += "<span class='lost'>&nbsp;YOU LOST! </span>&nbsp;";
+		if(lost == 2) bottom += "<span class='lost'>&nbsp;YOU WON! </span>&nbsp;";
+		bottom += "<button onclick='document.location.reload()'>Reset</button> \n";
+
+		document.getElementById("top").innerHTML = top;
+		document.getElementById("theBoard").innerHTML = theBoard;
+		document.getElementById("bottom").innerHTML = bottom;
+	}
+
+	setMines();
+	draw();
+	
+    // -------------------------------------------------------------------------------------------------------------------------
+
+</script>
